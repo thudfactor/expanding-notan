@@ -27,8 +27,8 @@
   }
 </script>
 
-<dialog bind:this={dialog} oncancel={() => (open = false)}>
-  <h2>{title}</h2>
+<dialog bind:this={dialog} aria-labelledby="confirm-title" oncancel={() => (open = false)}>
+  <h2 id="confirm-title">{title}</h2>
   <p>{message}</p>
   <div class="actions">
     <button type="button" onclick={() => (open = false)}>Cancel</button>

@@ -39,7 +39,11 @@
     capture = [point];
     hint = '';
     pending = undefined;
-    canvas?.setPointerCapture(event.pointerId);
+    try {
+      canvas?.setPointerCapture(event.pointerId);
+    } catch {
+      /* synthetic or already-released pointer; drawing still works */
+    }
     notan.clearPreview();
     notan.setLiveStroke(capture);
   }
@@ -59,7 +63,11 @@
   function onPointerUp(event: PointerEvent): void {
     if (!drawing || !notan) return;
     drawing = false;
-    canvas?.releasePointerCapture(event.pointerId);
+    try {
+      canvas?.releasePointerCapture(event.pointerId);
+    } catch {
+      /* pointer capture may not have been established */
+    }
 
     const silhouette = notan.getSilhouette();
     if (!silhouette) return;

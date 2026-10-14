@@ -114,6 +114,55 @@ try {
     await page.waitForTimeout(150);
   }
 
+  if (interaction === 'help') {
+    await page.getByRole('button', { name: 'Help' }).click();
+    await page.waitForTimeout(150);
+  }
+  if (interaction === 'pen') {
+    const box = await page.locator('canvas').boundingBox();
+    if (!box) throw new Error('Canvas not found');
+    const scale = Math.min(
+      (box.width - VIEW_PADDING * 2) / ARTBOARD_SIZE,
+      (box.height - VIEW_PADDING * 2) / ARTBOARD_SIZE,
+    );
+    const centerX = box.x + box.width / 2;
+    const centerY = box.y + box.height / 2;
+    const toScreen = (x, y) => ({
+      x: centerX + (x - ARTBOARD_SIZE / 2) * scale,
+      y: centerY + (y - ARTBOARD_SIZE / 2) * scale,
+    });
+    const start = toScreen(640, 360);
+    const end = toScreen(640, 520);
+    const control = toScreen(530, 440);
+    const points = [];
+    for (let i = 0; i <= 16; i++) {
+      const t = i / 16;
+      points.push([
+        (1 - t) ** 2 * start.x + 2 * (1 - t) * t * control.x + t ** 2 * end.x,
+        (1 - t) ** 2 * start.y + 2 * (1 - t) * t * control.y + t ** 2 * end.y,
+      ]);
+    }
+    await page.evaluate((pts) => {
+      const canvas = document.querySelector('canvas');
+      if (!canvas) return;
+      const base = {
+        bubbles: true,
+        cancelable: true,
+        pointerId: 7,
+        pointerType: 'pen',
+        isPrimary: true,
+      };
+      const fire = (type, [x, y], buttons) =>
+        canvas.dispatchEvent(
+          new PointerEvent(type, { ...base, clientX: x, clientY: y, button: 0, buttons }),
+        );
+      fire('pointerdown', pts[0], 1);
+      for (let i = 1; i < pts.length; i++) fire('pointermove', pts[i], 1);
+      fire('pointerup', pts[pts.length - 1], 0);
+    }, points);
+    await page.waitForTimeout(150);
+  }
+
   const sample = await page.evaluate(() => {
     const canvas = document.querySelector('canvas');
     if (!(canvas instanceof HTMLCanvasElement)) return null;

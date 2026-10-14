@@ -36,9 +36,9 @@
   }
 </script>
 
-<dialog bind:this={dialog} oncancel={() => (open = false)}>
+<dialog bind:this={dialog} aria-labelledby="export-title" oncancel={() => (open = false)}>
   <form onsubmit={submit}>
-    <h2>Export</h2>
+    <h2 id="export-title">Export</h2>
 
     <fieldset>
       <legend>Format</legend>

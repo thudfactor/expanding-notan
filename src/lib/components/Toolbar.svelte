@@ -1,6 +1,7 @@
 <script lang="ts">
   import ConfirmDialog from './ConfirmDialog.svelte';
   import ExportDialog from './ExportDialog.svelte';
+  import HelpDialog from './HelpDialog.svelte';
   import {
     canRedo,
     canUndo,
@@ -13,6 +14,7 @@
 
   let confirmNew = $state(false);
   let exportOpen = $state(false);
+  let helpOpen = $state(false);
 </script>
 
 <div class="toolbar" role="toolbar" aria-label="Edit actions">
@@ -21,6 +23,7 @@
   <button type="button" aria-pressed={getSeamVisible()} onclick={toggleSeams}>Seams</button>
   <button type="button" onclick={() => (exportOpen = true)}>Export</button>
   <button type="button" onclick={() => (confirmNew = true)}>New project</button>
+  <button type="button" onclick={() => (helpOpen = true)}>Help</button>
 </div>
 
 <ConfirmDialog
@@ -32,6 +35,8 @@
 />
 
 <ExportDialog bind:open={exportOpen} />
+
+<HelpDialog bind:open={helpOpen} />
 
 <style>
   .toolbar {
