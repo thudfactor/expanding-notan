@@ -54,6 +54,15 @@ See the plan and ADRs below for the full rationale.
 - `docs/ux-concerns.md` — running list of UX issues to address later
 - `docs/screenshots/` — committed visual record, one capture per milestone
 
+## Deployment (GitHub Pages)
+
+The app is deployed to GitHub Pages by `.github/workflows/deploy.yml`, which builds and
+publishes `dist/` on every push to `main`. Because it is a project page served from a
+subpath, the workflow builds with `BASE_PATH=/expanding-notan/` so assets resolve correctly;
+local dev uses the root base.
+
+One-time setup: in **Settings → Pages**, set the source to **GitHub Actions**.
+
 ## Links
 
 - Repository: https://github.com/thudfactor/expanding-notan
