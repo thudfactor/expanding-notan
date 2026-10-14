@@ -75,3 +75,22 @@ export function signedArea2(points: readonly Pt[]): number {
 export function polygonArea(points: readonly Pt[]): number {
   return Math.abs(signedArea2(points)) / 2;
 }
+
+/**
+ * Whether a polygon's bounding box intersects the artboard `[0, size] × [0, size]`.
+ * Used to disable reflections that would place a cut entirely off the artboard.
+ */
+export function intersectsArtboard(points: readonly Pt[], size: number): boolean {
+  if (points.length === 0) return false;
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const point of points) {
+    if (point.x < minX) minX = point.x;
+    if (point.x > maxX) maxX = point.x;
+    if (point.y < minY) minY = point.y;
+    if (point.y > maxY) maxY = point.y;
+  }
+  return maxX >= 0 && minX <= size && maxY >= 0 && minY <= size;
+}

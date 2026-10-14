@@ -2,9 +2,9 @@
   import { onMount } from 'svelte';
   import CommitBar from './CommitBar.svelte';
   import { createNotanCanvas, type NotanCanvas } from '../paper/paperSetup';
-  import { squareRect } from '../geometry/artboard';
+  import { ARTBOARD_SIZE, squareRect } from '../geometry/artboard';
   import { getFitter } from '../geometry/fit';
-  import { mirrorPoints } from '../geometry/math';
+  import { intersectsArtboard, mirrorPoints } from '../geometry/math';
   import { DEFAULT_CLOSURE, closeRegion } from '../geometry/tracing';
   import { DEFAULT_FIT_OPTIONS, type CutOp, type Edge, type Pt } from '../geometry/types';
   import { addCut, getOps, getSeamVisible } from '../state/project.svelte';
@@ -17,6 +17,18 @@
   let notan = $state.raw<NotanCanvas | undefined>(undefined);
   let hint = $state('');
   let pending = $state<{ region: Pt[]; snapPoints: Pt[]; rawPoints: Pt[] } | undefined>(undefined);
+
+  const EDGES = ['left', 'right', 'top', 'bottom'] as const;
+
+  // Axes whose reflection would place the cut entirely off the artboard.
+  const disabledEdges = $derived.by((): Edge[] => {
+    const current = pending;
+    if (!current) return [];
+    const square = squareRect();
+    return EDGES.filter(
+      (edge) => !intersectsArtboard(mirrorPoints(current.region, edge, square), ARTBOARD_SIZE),
+    );
+  });
 
   let drawing = false;
   let capture: Pt[] = [];
@@ -177,6 +189,7 @@
       onholeonly={() => commit(null)}
       oncancel={cancel}
       onhover={onHover}
+      disabledEdges={disabledEdges}
     />
   {:else if hint}
     <p class="hint" role="status">{hint}</p>

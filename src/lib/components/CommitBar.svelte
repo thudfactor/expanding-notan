@@ -6,12 +6,16 @@
     onholeonly,
     oncancel,
     onhover,
+    disabledEdges = [],
   }: {
     onreflect: (edge: Edge) => void;
     onholeonly: () => void;
     oncancel: () => void;
     onhover: (edge: Edge | null) => void;
+    disabledEdges?: readonly Edge[];
   } = $props();
+
+  const isDisabled = (edge: Edge): boolean => disabledEdges.includes(edge);
 
   const directions: Array<{ edge: Edge; label: string }> = [
     { edge: 'left', label: 'Left' },
@@ -26,10 +30,11 @@
   {#each directions as direction (direction.edge)}
     <button
       type="button"
+      disabled={isDisabled(direction.edge)}
       aria-label={`Reflect across the ${direction.label.toLowerCase()} edge`}
       onclick={() => onreflect(direction.edge)}
-      onmouseenter={() => onhover(direction.edge)}
-      onfocus={() => onhover(direction.edge)}
+      onmouseenter={() => onhover(isDisabled(direction.edge) ? null : direction.edge)}
+      onfocus={() => onhover(isDisabled(direction.edge) ? null : direction.edge)}
       onmouseleave={() => onhover(null)}
       onblur={() => onhover(null)}
     >
@@ -90,8 +95,13 @@
     cursor: pointer;
   }
 
-  button:hover {
+  button:hover:not(:disabled) {
     filter: brightness(1.08);
+  }
+
+  button:disabled {
+    opacity: 0.4;
+    cursor: default;
   }
 
   button:focus-visible {

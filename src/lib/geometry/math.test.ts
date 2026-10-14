@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { squareRect, type Rect } from './artboard';
-import { edgeAxis, edgeSegment, isVerticalEdge, mirrorPoints, polygonArea, signedArea2 } from './math';
+import { edgeAxis, edgeSegment, intersectsArtboard, isVerticalEdge, mirrorPoints, polygonArea, signedArea2 } from './math';
 import type { Edge, Pt } from './types';
 
 const SQUARE: Rect = squareRect(); // x: 240, y: 240, 400 x 400
@@ -74,6 +74,40 @@ describe('mirrorPoints', () => {
     for (const edge of ['left', 'right', 'top', 'bottom'] as Edge[]) {
       expect(polygonArea(mirrorPoints(polygon, edge, SQUARE))).toBeCloseTo(area);
     }
+  });
+});
+
+describe('intersectsArtboard', () => {
+  it('reports whether a polygon overlaps the artboard', () => {
+    const inside: Pt[] = [
+      { x: 100, y: 100 },
+      { x: 200, y: 100 },
+      { x: 200, y: 200 },
+    ];
+    expect(intersectsArtboard(inside, 880)).toBe(true);
+
+    const offLeft: Pt[] = [
+      { x: -160, y: 400 },
+      { x: -50, y: 400 },
+      { x: -50, y: 500 },
+    ];
+    expect(intersectsArtboard(offLeft, 880)).toBe(false);
+
+    const offRight: Pt[] = [
+      { x: 900, y: 400 },
+      { x: 1000, y: 400 },
+      { x: 1000, y: 500 },
+    ];
+    expect(intersectsArtboard(offRight, 880)).toBe(false);
+
+    const straddling: Pt[] = [
+      { x: -5, y: 400 },
+      { x: 5, y: 400 },
+      { x: 5, y: 500 },
+    ];
+    expect(intersectsArtboard(straddling, 880)).toBe(true);
+
+    expect(intersectsArtboard([], 880)).toBe(false);
   });
 });
 
