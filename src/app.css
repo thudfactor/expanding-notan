@@ -1,0 +1,55 @@
+:root {
+  color-scheme: light;
+  --page-bg: #e9e9ec;
+  --surface: #ffffff;
+  --ink: #1a1a1a;
+  --border: rgba(0, 0, 0, 0.1);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--page-bg);
+  color: var(--ink);
+}
+
+#app {
+  height: 100%;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.app__toolbar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.app__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.app__workspace {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
