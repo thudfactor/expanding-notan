@@ -33,3 +33,4 @@ when the corresponding decision is first implemented.
 | 0010 | Toggleable seam layer | Construction lines separated from silhouette; excluded from default export |
 | 0011 | Raw points canonical; pluggable stroke fitting | Store raw input; simplify/smooth is a replaceable `StrokeFitter` strategy |
 | 0012 | Playwright for screenshots and visual verification | Headless captures via `npm run shot`; committed under `docs/screenshots/` |
+| 0013 | Pieces independent; attachment emergent; placement derived | No stored attachment; mirror is the default placement, with future authored overrides |
