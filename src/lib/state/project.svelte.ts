@@ -1,24 +1,40 @@
 import type { CutOp } from '../geometry/types';
+import * as history from './history';
 
 /**
- * The single work-in-progress operation log. `$state.raw` avoids deep-proxying
- * the geometry arrays; the log is replaced wholesale when it changes.
- *
- * History and persistence are layered on top of this in later milestones.
+ * App-facing project state: a runes store wrapping the pure snapshot history.
+ * `$state.raw` avoids deep-proxying the geometry; the whole History is replaced
+ * on every change.
  */
-let ops = $state.raw<CutOp[]>([]);
+let state = $state.raw<history.History>(history.createHistory());
 
 /** Read the current operation log (reactive when read in a reactive context). */
 export function getOps(): readonly CutOp[] {
-  return ops;
+  return history.currentOps(state);
+}
+
+export function canUndo(): boolean {
+  return history.canUndo(state);
+}
+
+export function canRedo(): boolean {
+  return history.canRedo(state);
 }
 
 /** Append a committed cut. */
 export function addCut(op: CutOp): void {
-  ops = [...ops, op];
+  state = history.push(state, op);
+}
+
+export function undo(): void {
+  state = history.undo(state);
+}
+
+export function redo(): void {
+  state = history.redo(state);
 }
 
 /** Clear the project (used by "New project" later). */
 export function resetProject(): void {
-  ops = [];
+  state = history.createHistory();
 }

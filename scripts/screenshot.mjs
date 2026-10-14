@@ -75,11 +75,15 @@ try {
   await page.goto(url, { waitUntil: 'load' });
   await page.waitForSelector('body[data-notan-ready="true"]', { timeout: 15000 });
 
-  if (interaction === 'draw' || interaction === 'commit') {
+  if (interaction === 'draw' || interaction === 'commit' || interaction === 'undo') {
     await drawCut(page);
   }
-  if (interaction === 'commit') {
+  if (interaction === 'commit' || interaction === 'undo') {
     await page.getByRole('button', { name: 'Reflect right' }).click();
+    await page.waitForTimeout(150);
+  }
+  if (interaction === 'undo') {
+    await page.getByRole('button', { name: 'Undo' }).click();
     await page.waitForTimeout(150);
   }
 
