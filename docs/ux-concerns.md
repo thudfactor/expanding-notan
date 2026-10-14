@@ -8,6 +8,7 @@ the milestone or commit that resolved it.
 | --- | --- | --- | --- | --- |
 | 1 | Open | Commit bar | Reflection button labels are confusing when reflecting an expanded cut | 2026-10-14 |
 | 2 | Open | Drawing | Tolerances for recognizing start/stop points on an edge are too small | 2026-10-14 |
+| 3 | Open | Seams | Seam lines are barely visible for simple cuts | 2026-10-14 |
 
 ## 1. Reflection button labels are confusing when reflecting an expanded cut
 
@@ -54,3 +55,24 @@ These feel too tight for hand and stylus drawing. Options to consider later:
 - Optionally "snap on release": extend the stroke to the nearest edge if it ends close.
 
 Note: this is a usability-threshold issue, not a change to cut validity rules (ADR 0009).
+
+## 3. Seam lines are barely visible for simple cuts
+
+- **Status:** Open
+- **Area:** Seams / canvas
+- **Raised:** 2026-10-14
+
+Seam lines (the outlines of each cut region and its mirror, ADR 0010) sit exactly on the
+black/white boundary for a flush edge-to-edge cut, so they read as a faint gray tint rather
+than a legible construction line. They are more pronounced for overlapping/multi-level cuts.
+
+Options to consider later:
+
+- Increase contrast (darker or colored) or thickness; try dashed lines.
+- Draw seams inset into the black so they are always over a solid color.
+- Render seams only where they are strictly interior to black (skip boundary-coincident
+  segments), so the layer only shows genuinely new information.
+- Give each piece/mirror a subtly different seam tone to aid reading the construction.
+
+Note: purely a rendering/legibility concern; the seam layer is already separate from the
+silhouette and never alters the artwork.
