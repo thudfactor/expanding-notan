@@ -75,8 +75,12 @@ try {
   await page.goto(url, { waitUntil: 'load' });
   await page.waitForSelector('body[data-notan-ready="true"]', { timeout: 15000 });
 
-  if (interaction === 'draw') {
+  if (interaction === 'draw' || interaction === 'commit') {
     await drawCut(page);
+  }
+  if (interaction === 'commit') {
+    await page.getByRole('button', { name: 'Reflect right' }).click();
+    await page.waitForTimeout(150);
   }
 
   const sample = await page.evaluate(() => {

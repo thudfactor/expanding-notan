@@ -1,11 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import CommitBar from './CommitBar.svelte';
   import { createNotanCanvas, type NotanCanvas } from '../paper/paperSetup';
   import { getFitter } from '../geometry/fit';
   import { DEFAULT_CLOSURE, closeRegion } from '../geometry/tracing';
-  import { DEFAULT_FIT_OPTIONS, type CutOp, type Pt } from '../geometry/types';
-
-  let { ops = [] }: { ops?: readonly CutOp[] } = $props();
+  import { DEFAULT_FIT_OPTIONS, type CutOp, type Edge, type Pt } from '../geometry/types';
+  import { addCut, getOps } from '../state/project.svelte';
 
   const STRATEGY = 'spline';
 
@@ -14,6 +14,7 @@
   // `$state.raw` keeps Paper.js objects uninstrumented by Svelte's proxy.
   let notan = $state.raw<NotanCanvas | undefined>(undefined);
   let hint = $state('');
+  let pending = $state<{ region: Pt[]; snapPoints: Pt[]; rawPoints: Pt[] } | undefined>(undefined);
 
   let drawing = false;
   let capture: Pt[] = [];
@@ -37,6 +38,7 @@
     drawing = true;
     capture = [point];
     hint = '';
+    pending = undefined;
     canvas?.setPointerCapture(event.pointerId);
     notan.clearPreview();
     notan.setLiveStroke(capture);
@@ -71,8 +73,35 @@
       return;
     }
 
-    // M4 will turn this preview into a commit bar (Reflect L/R/U/D, Hole only).
+    pending = { region: result.region, snapPoints: result.snapPoints, rawPoints: capture.slice() };
     notan.showPreviewRegion(result.region, result.snapPoints);
+  }
+
+  function commit(reflect: Edge | null): void {
+    if (!pending || !notan) return;
+
+    const op: CutOp = {
+      id: crypto.randomUUID(),
+      rawPoints: pending.rawPoints,
+      region: pending.region,
+      fit: { strategy: STRATEGY, options: DEFAULT_FIT_OPTIONS },
+      reflect,
+    };
+
+    pending = undefined;
+    hint = '';
+    notan.clearPreview();
+    addCut(op);
+  }
+
+  function cancel(): void {
+    pending = undefined;
+    hint = '';
+    notan?.clearPreview();
+  }
+
+  function onKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape' && pending) cancel();
   }
 
   onMount(() => {
@@ -106,9 +135,11 @@
 
   // Rebuild the silhouette whenever the operation log changes.
   $effect(() => {
-    notan?.setOps(ops);
+    notan?.setOps(getOps());
   });
 </script>
+
+<svelte:window onkeydown={onKeydown} />
 
 <div class="canvas-host" bind:this={host}>
   <canvas
@@ -119,7 +150,14 @@
     onpointerup={onPointerUp}
     onpointercancel={onPointerUp}
   ></canvas>
-  {#if hint}
+
+  {#if pending}
+    <CommitBar
+      onreflect={(edge) => commit(edge)}
+      onholeonly={() => commit(null)}
+      oncancel={cancel}
+    />
+  {:else if hint}
     <p class="hint" role="status">{hint}</p>
   {/if}
 </div>
