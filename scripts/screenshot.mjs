@@ -75,15 +75,23 @@ try {
   await page.goto(url, { waitUntil: 'load' });
   await page.waitForSelector('body[data-notan-ready="true"]', { timeout: 15000 });
 
-  if (interaction === 'draw' || interaction === 'commit' || interaction === 'undo') {
+  if (interaction === 'draw' || interaction === 'commit' || interaction === 'undo' || interaction === 'reload') {
     await drawCut(page);
   }
-  if (interaction === 'commit' || interaction === 'undo') {
+  if (interaction === 'commit' || interaction === 'undo' || interaction === 'reload') {
     await page.getByRole('button', { name: 'Reflect right' }).click();
     await page.waitForTimeout(150);
   }
   if (interaction === 'undo') {
     await page.getByRole('button', { name: 'Undo' }).click();
+    await page.waitForTimeout(150);
+  }
+  if (interaction === 'reload') {
+    await page.waitForTimeout(600); // let the debounced autosave flush
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForSelector('body[data-notan-ready="true"]', { timeout: 15000 });
+    const undoEnabled = await page.getByRole('button', { name: 'Undo' }).isEnabled();
+    console.log(`After reload: Undo enabled = ${undoEnabled}`);
     await page.waitForTimeout(150);
   }
 

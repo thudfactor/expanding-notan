@@ -1,11 +1,23 @@
 <script lang="ts">
-  import { canRedo, canUndo, redo, undo } from '../state/project.svelte';
+  import ConfirmDialog from './ConfirmDialog.svelte';
+  import { canRedo, canUndo, redo, resetProject, undo } from '../state/project.svelte';
+
+  let confirmNew = $state(false);
 </script>
 
 <div class="toolbar" role="toolbar" aria-label="Edit actions">
   <button type="button" disabled={!canUndo()} onclick={undo}>Undo</button>
   <button type="button" disabled={!canRedo()} onclick={redo}>Redo</button>
+  <button type="button" onclick={() => (confirmNew = true)}>New project</button>
 </div>
+
+<ConfirmDialog
+  bind:open={confirmNew}
+  title="Start a new project?"
+  message="This will permanently discard your current work in progress."
+  confirmLabel="New project"
+  onconfirm={resetProject}
+/>
 
 <style>
   .toolbar {

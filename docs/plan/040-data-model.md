@@ -44,14 +44,14 @@ interface ProjectState {
 
 ## Local storage schema
 
-Key: `notan:v1:project`
+Key: `notan:v1:project`. The `history` holds the op log (its `states[index]` is the current
+`ops`); there is deliberately no separate `ops` field to drift.
 
 ```jsonc
 {
   "version": 1,
-  "artboard": { "side": 400 },
+  "artboard": { "side": 880 },                       // full artboard; the square side is 400
   "fitDefaults": { "minDistance": 3, "simplifyTolerance": 2, "smoothing": 0.5 },
-  "ops": [ /* CutOp[] */ ],
   "seamVisible": true,
   "history": { "states": [ /* CutOp[][] */ ], "index": 0 }
 }
