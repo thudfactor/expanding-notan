@@ -2,7 +2,9 @@
   import { onMount } from 'svelte';
   import CommitBar from './CommitBar.svelte';
   import { createNotanCanvas, type NotanCanvas } from '../paper/paperSetup';
+  import { squareRect } from '../geometry/artboard';
   import { getFitter } from '../geometry/fit';
+  import { mirrorPoints } from '../geometry/math';
   import { DEFAULT_CLOSURE, closeRegion } from '../geometry/tracing';
   import { DEFAULT_FIT_OPTIONS, type CutOp, type Edge, type Pt } from '../geometry/types';
   import { addCut, getOps, getSeamVisible } from '../state/project.svelte';
@@ -102,6 +104,16 @@
     addCut(op);
   }
 
+  function onHover(edge: Edge | null): void {
+    if (!notan || !pending) return;
+    if (!edge) {
+      notan.setHover(null, null);
+      return;
+    }
+    const mirrored = mirrorPoints(pending.region, edge, squareRect());
+    notan.setHover(edge, mirrored);
+  }
+
   function cancel(): void {
     pending = undefined;
     hint = '';
@@ -164,6 +176,7 @@
       onreflect={(edge) => commit(edge)}
       onholeonly={() => commit(null)}
       oncancel={cancel}
+      onhover={onHover}
     />
   {:else if hint}
     <p class="hint" role="status">{hint}</p>

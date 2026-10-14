@@ -23,6 +23,32 @@ export function isVerticalEdge(edge: Edge): boolean {
   return edge === 'left' || edge === 'right';
 }
 
+/** The two endpoints of a square edge (used to draw an edge highlight). */
+export function edgeSegment(edge: Edge, square: Rect): [Pt, Pt] {
+  switch (edge) {
+    case 'left':
+      return [
+        { x: square.x, y: square.y },
+        { x: square.x, y: square.y + square.height },
+      ];
+    case 'right':
+      return [
+        { x: square.x + square.width, y: square.y },
+        { x: square.x + square.width, y: square.y + square.height },
+      ];
+    case 'top':
+      return [
+        { x: square.x, y: square.y },
+        { x: square.x + square.width, y: square.y },
+      ];
+    case 'bottom':
+      return [
+        { x: square.x, y: square.y + square.height },
+        { x: square.x + square.width, y: square.y + square.height },
+      ];
+  }
+}
+
 /**
  * Mirror points across a square edge. The perpendicular component is negated
  * about the axis; the parallel component is unchanged.

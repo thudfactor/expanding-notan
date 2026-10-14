@@ -5,27 +5,55 @@
     onreflect,
     onholeonly,
     oncancel,
+    onhover,
   }: {
     onreflect: (edge: Edge) => void;
     onholeonly: () => void;
     oncancel: () => void;
+    onhover: (edge: Edge | null) => void;
   } = $props();
 
   const directions: Array<{ edge: Edge; label: string }> = [
-    { edge: 'left', label: 'Reflect left' },
-    { edge: 'right', label: 'Reflect right' },
-    { edge: 'top', label: 'Reflect up' },
-    { edge: 'bottom', label: 'Reflect down' },
+    { edge: 'left', label: 'Left' },
+    { edge: 'right', label: 'Right' },
+    { edge: 'top', label: 'Top' },
+    { edge: 'bottom', label: 'Bottom' },
   ];
 </script>
 
 <div class="commitbar" role="toolbar" aria-label="Commit cut">
-  <span class="commitbar__label">Cut</span>
+  <span class="commitbar__label">Reflect across</span>
   {#each directions as direction (direction.edge)}
-    <button type="button" onclick={() => onreflect(direction.edge)}>{direction.label}</button>
+    <button
+      type="button"
+      aria-label={`Reflect across the ${direction.label.toLowerCase()} edge`}
+      onclick={() => onreflect(direction.edge)}
+      onmouseenter={() => onhover(direction.edge)}
+      onfocus={() => onhover(direction.edge)}
+      onmouseleave={() => onhover(null)}
+      onblur={() => onhover(null)}
+    >
+      {direction.label} edge
+    </button>
   {/each}
-  <button type="button" class="commitbar__secondary" onclick={onholeonly}>Hole only</button>
-  <button type="button" class="commitbar__secondary" onclick={oncancel}>Cancel</button>
+  <button
+    type="button"
+    class="commitbar__secondary"
+    onmouseenter={() => onhover(null)}
+    onfocus={() => onhover(null)}
+    onclick={onholeonly}
+  >
+    Hole only
+  </button>
+  <button
+    type="button"
+    class="commitbar__secondary"
+    onmouseenter={() => onhover(null)}
+    onfocus={() => onhover(null)}
+    onclick={oncancel}
+  >
+    Cancel
+  </button>
 </div>
 
 <style>

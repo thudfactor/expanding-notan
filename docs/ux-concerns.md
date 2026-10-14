@@ -6,14 +6,15 @@ the milestone or commit that resolved it.
 
 | # | Status | Area | Concern | Raised |
 | --- | --- | --- | --- | --- |
-| 1 | Open | Commit bar | Reflection button labels are confusing when reflecting an expanded cut | 2026-10-14 |
+| 1 | Done | Commit bar | Reflection button labels are confusing when reflecting an expanded cut | 2026-10-14 |
 | 2 | Open | Drawing | Tolerances for recognizing start/stop points on an edge are too small | 2026-10-14 |
 | 3 | Open | Seams | Seam lines are barely visible for simple cuts | 2026-10-14 |
 | 4 | Done | Onboarding | New users don't know what they are expected to do | 2026-10-14 |
 
 ## 1. Reflection button labels are confusing when reflecting an expanded cut
 
-- **Status:** Open
+- **Status:** Done — labels now read "Reflect across … Left/Right/Top/Bottom edge"; hovering
+  highlights the target edge and previews the mirrored placement at 50% opacity
 - **Area:** Commit bar
 - **Raised:** 2026-10-14
 

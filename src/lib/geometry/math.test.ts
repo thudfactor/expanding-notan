@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { squareRect, type Rect } from './artboard';
-import { edgeAxis, isVerticalEdge, mirrorPoints, polygonArea, signedArea2 } from './math';
+import { edgeAxis, edgeSegment, isVerticalEdge, mirrorPoints, polygonArea, signedArea2 } from './math';
 import type { Edge, Pt } from './types';
 
 const SQUARE: Rect = squareRect(); // x: 240, y: 240, 400 x 400
@@ -18,6 +18,27 @@ describe('edgeAxis', () => {
     expect(isVerticalEdge('right')).toBe(true);
     expect(isVerticalEdge('top')).toBe(false);
     expect(isVerticalEdge('bottom')).toBe(false);
+  });
+});
+
+describe('edgeSegment', () => {
+  it('returns the endpoints of each square edge', () => {
+    expect(edgeSegment('left', SQUARE)).toEqual([
+      { x: 240, y: 240 },
+      { x: 240, y: 640 },
+    ]);
+    expect(edgeSegment('right', SQUARE)).toEqual([
+      { x: 640, y: 240 },
+      { x: 640, y: 640 },
+    ]);
+    expect(edgeSegment('top', SQUARE)).toEqual([
+      { x: 240, y: 240 },
+      { x: 640, y: 240 },
+    ]);
+    expect(edgeSegment('bottom', SQUARE)).toEqual([
+      { x: 240, y: 640 },
+      { x: 640, y: 640 },
+    ]);
   });
 });
 

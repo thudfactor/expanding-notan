@@ -54,8 +54,9 @@
     <h3>Using this tool</h3>
     <ul>
       <li><strong>Draw</strong> a cut by dragging on the square (mouse, pen, or touch).</li>
-      <li><strong>Reflect left/right/up/down</strong> to flip the cut outward, or choose
-        <strong>Hole only</strong>, or <strong>Cancel</strong> (Esc).</li>
+      <li><strong>Reflect across</strong> an edge (left, right, top, or bottom) to flip the
+        cut outward, or choose <strong>Hole only</strong>, or <strong>Cancel</strong> (Esc).
+        Hovering a direction highlights the edge and previews where the piece will land.</li>
       <li><strong>Undo / Redo</strong> with the buttons, or Cmd/Ctrl+Z and
         Shift+Cmd/Ctrl+Z.</li>
       <li><strong>Seams</strong> toggles the construction lines.</li>

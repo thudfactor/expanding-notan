@@ -85,14 +85,14 @@ try {
     }
   }
 
-  const doDraw = ['draw', 'commit', 'undo', 'reload', 'seams-off', 'export'].includes(interaction);
+  const doDraw = ['draw', 'commit', 'undo', 'reload', 'seams-off', 'export', 'reflect-hover'].includes(interaction);
   const doCommit = ['commit', 'undo', 'reload', 'seams-off', 'export'].includes(interaction);
 
   if (doDraw) {
     await drawCut(page);
   }
   if (doCommit) {
-    await page.getByRole('button', { name: 'Reflect right' }).click();
+    await page.getByRole('button', { name: 'Reflect across the right edge' }).click();
     await page.waitForTimeout(150);
   }
   if (interaction === 'undo') {
@@ -124,6 +124,10 @@ try {
     await page.waitForTimeout(150);
   }
 
+  if (interaction === 'reflect-hover') {
+    await page.getByRole('button', { name: 'Reflect across the right edge' }).hover();
+    await page.waitForTimeout(150);
+  }
   if (interaction === 'help') {
     await page.getByRole('button', { name: 'Help' }).click();
     await page.waitForTimeout(150);

@@ -1,12 +1,13 @@
 import Paper from 'paper';
-import { ARTBOARD_SIZE, artboardRect, fitScale } from '../geometry/artboard';
+import { ARTBOARD_SIZE, artboardRect, fitScale, squareRect } from '../geometry/artboard';
 import {
   buildSeamOutlines,
   buildSilhouette,
   type PaperPathItem,
   type PaperScope,
 } from '../geometry/engine';
-import type { CutOp, Pt } from '../geometry/types';
+import { edgeSegment } from '../geometry/math';
+import type { CutOp, Edge, Pt } from '../geometry/types';
 
 /** Viewport padding (CSS px) left around the fitted artboard. */
 const VIEW_PADDING = 16;
@@ -28,6 +29,8 @@ export interface NotanCanvas {
   setLiveStroke(points: readonly Pt[]): void;
   /** Show a resolved cut region preview with its snap points. */
   showPreviewRegion(region: readonly Pt[], snapPoints: readonly Pt[]): void;
+  /** Highlight a reflection edge and preview the mirrored placement (or clear). */
+  setHover(edge: Edge | null, mirroredRegion: readonly Pt[] | null): void;
   /** Remove any preview overlay. */
   clearPreview(): void;
   /** Fit the artboard into a viewport of the given CSS pixel size. */
@@ -59,6 +62,8 @@ export function createNotanCanvas(canvas: HTMLCanvasElement): NotanCanvas {
   let previewStroke: PaperPathItem | undefined;
   let previewRegion: PaperPathItem | undefined;
   let snapDots: PaperItem | undefined;
+  let edgeHighlight: PaperPathItem | undefined;
+  let reflectionPreview: PaperPathItem | undefined;
   let currentOps: readonly CutOp[] = [];
 
   function bringOverlayForward(): void {
@@ -134,6 +139,7 @@ export function createNotanCanvas(canvas: HTMLCanvasElement): NotanCanvas {
     previewStroke = undefined;
     previewRegion = undefined;
     snapDots = undefined;
+    clearHover();
 
     const fill = new scope.Color(ACCENT);
     fill.alpha = 0.3;
@@ -167,6 +173,50 @@ export function createNotanCanvas(canvas: HTMLCanvasElement): NotanCanvas {
     previewStroke = undefined;
     previewRegion = undefined;
     snapDots = undefined;
+    clearHover();
+  }
+
+  function clearHover(): void {
+    drop(edgeHighlight);
+    drop(reflectionPreview);
+    edgeHighlight = undefined;
+    reflectionPreview = undefined;
+  }
+
+  function setHover(edge: Edge | null, mirroredRegion: readonly Pt[] | null): void {
+    clearHover();
+    if (!edge) {
+      bringOverlayForward();
+      return;
+    }
+
+    // Preview where the mirrored copy would land, at 50% opacity.
+    if (mirroredRegion && mirroredRegion.length >= 3) {
+      const fill = new scope.Color('#111111');
+      fill.alpha = 0.5;
+      const preview = new scope.Path(mirroredRegion.map((point) => [point.x, point.y]));
+      preview.closed = true;
+      preview.fillColor = fill;
+      layer.addChild(preview);
+      reflectionPreview = preview;
+    }
+
+    // Highlight the square edge that will be used as the reflection axis.
+    const [from, to] = edgeSegment(edge, squareRect());
+    const line = new scope.Path([
+      [from.x, from.y],
+      [to.x, to.y],
+    ]);
+    const color = new scope.Color(ACCENT);
+    color.alpha = 0.85;
+    line.strokeColor = color;
+    line.strokeWidth = 8;
+    line.strokeCap = 'round';
+    layer.addChild(line);
+    edgeHighlight = line;
+
+    bringOverlayForward();
+    edgeHighlight.bringToFront();
   }
 
   function resize(width: number, height: number): void {
@@ -190,6 +240,7 @@ export function createNotanCanvas(canvas: HTMLCanvasElement): NotanCanvas {
     getSilhouette,
     setLiveStroke,
     showPreviewRegion,
+    setHover,
     clearPreview,
     resize,
     destroy,
