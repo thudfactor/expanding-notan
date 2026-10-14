@@ -40,6 +40,11 @@ function scheduleSave(): void {
   saveTimer = setTimeout(saveNow, SAVE_DELAY);
 }
 
+/** Whether a saved project was restored at startup (used for first-run onboarding). */
+export function getHadSavedProject(): boolean {
+  return saved !== null;
+}
+
 /** Read the current operation log (reactive when read in a reactive context). */
 export function getOps(): readonly CutOp[] {
   return history.currentOps(state);

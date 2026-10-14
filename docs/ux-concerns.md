@@ -9,7 +9,7 @@ the milestone or commit that resolved it.
 | 1 | Open | Commit bar | Reflection button labels are confusing when reflecting an expanded cut | 2026-10-14 |
 | 2 | Open | Drawing | Tolerances for recognizing start/stop points on an edge are too small | 2026-10-14 |
 | 3 | Open | Seams | Seam lines are barely visible for simple cuts | 2026-10-14 |
-| 4 | Open | Onboarding | New users don't know what they are expected to do | 2026-10-14 |
+| 4 | Done | Onboarding | New users don't know what they are expected to do | 2026-10-14 |
 
 ## 1. Reflection button labels are confusing when reflecting an expanded cut
 
@@ -80,7 +80,7 @@ silhouette and never alters the artwork.
 
 ## 4. New users don't know what they are expected to do
 
-- **Status:** Open
+- **Status:** Done — Help auto-opens when there is no saved project (simplest version)
 - **Area:** Onboarding
 - **Raised:** 2026-10-14
 

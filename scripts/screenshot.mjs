@@ -75,6 +75,16 @@ try {
   await page.goto(url, { waitUntil: 'load' });
   await page.waitForSelector('body[data-notan-ready="true"]', { timeout: 15000 });
 
+  // First-run onboarding auto-opens Help when there is no saved project; dismiss
+  // it unless we are capturing that welcome state.
+  if (interaction !== 'welcome') {
+    const help = page.getByRole('dialog').filter({ hasText: 'What is Notan?' });
+    if ((await help.count()) > 0 && (await help.first().isVisible())) {
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(100);
+    }
+  }
+
   const doDraw = ['draw', 'commit', 'undo', 'reload', 'seams-off', 'export'].includes(interaction);
   const doCommit = ['commit', 'undo', 'reload', 'seams-off', 'export'].includes(interaction);
 

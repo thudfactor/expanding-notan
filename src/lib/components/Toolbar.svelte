@@ -5,6 +5,7 @@
   import {
     canRedo,
     canUndo,
+    getHadSavedProject,
     getSeamVisible,
     redo,
     resetProject,
@@ -14,7 +15,8 @@
 
   let confirmNew = $state(false);
   let exportOpen = $state(false);
-  let helpOpen = $state(false);
+  // First-run onboarding: open Help automatically when there is no saved project.
+  let helpOpen = $state(!getHadSavedProject());
 </script>
 
 <div class="toolbar" role="toolbar" aria-label="Edit actions">
