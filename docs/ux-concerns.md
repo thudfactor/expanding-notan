@@ -7,7 +7,7 @@ the milestone or commit that resolved it.
 | # | Status | Area | Concern | Raised |
 | --- | --- | --- | --- | --- |
 | 1 | Done | Commit bar | Reflection button labels are confusing when reflecting an expanded cut | 2026-10-14 |
-| 2 | Open | Drawing | Tolerances for recognizing start/stop points on an edge are too small | 2026-10-14 |
+| 2 | Done | Drawing | Tolerances for recognizing start/stop points on an edge are too small | 2026-10-14 |
 | 3 | Open | Seams | Seam lines are barely visible for simple cuts | 2026-10-14 |
 | 4 | Done | Onboarding | New users don't know what they are expected to do | 2026-10-14 |
 
@@ -34,7 +34,8 @@ stays one of the four original square edges.
 
 ## 2. Tolerances for recognizing start/stop points on an edge are too small
 
-- **Status:** Open
+- **Status:** Done — screen-relative radii (32px snap / 24px close), boundary-crossing
+  endpoints for overshoot, and a live magnet indicator
 - **Area:** Drawing / cut recognition
 - **Raised:** 2026-10-14
 

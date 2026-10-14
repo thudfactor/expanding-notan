@@ -19,6 +19,33 @@ export const DEFAULT_CLOSURE: ClosureOptions = {
   boundaryTolerance: 1.5,
 };
 
+/** Grab radii in CSS pixels, converted to artboard units via the view scale. */
+export interface ClosureRadiiPx {
+  closeRadiusPx: number;
+  snapRadiusPx: number;
+}
+
+export const DEFAULT_CLOSURE_PX: ClosureRadiiPx = {
+  closeRadiusPx: 24,
+  snapRadiusPx: 32,
+};
+
+/**
+ * Build closure thresholds from pixel radii so the "grab" feel is constant
+ * across window sizes. `unitsPerPx` is artboard units per CSS pixel (1 / view.zoom).
+ */
+export function closureOptionsFromScale(
+  unitsPerPx: number,
+  radii: ClosureRadiiPx = DEFAULT_CLOSURE_PX,
+): ClosureOptions {
+  return {
+    closeThreshold: radii.closeRadiusPx * unitsPerPx,
+    snapThreshold: radii.snapRadiusPx * unitsPerPx,
+    minArea: DEFAULT_CLOSURE.minArea,
+    boundaryTolerance: DEFAULT_CLOSURE.boundaryTolerance,
+  };
+}
+
 export type ClosureKind = 'self' | 'edge';
 
 export interface ClosureResult {
@@ -90,16 +117,110 @@ function chordFollowsBoundary(
   return true;
 }
 
+/** Clip a closed polygon to the black silhouette; null if too small. */
+function clipToSilhouette(
+  scope: PaperScope,
+  polygon: readonly Pt[],
+  silhouette: PaperPathItem,
+  options: ClosureOptions,
+): Pt[] | null {
+  if (polygon.length < 3) return null;
+  const clipped = pathFromPoints(scope, polygon).intersect(silhouette);
+  if (!clipped || areaOf(clipped) < options.minArea) return null;
+  const region = pathToPoints(clipped);
+  return region.length >= 3 ? region : null;
+}
+
+function cumulativeOffsets(points: readonly Pt[]): number[] {
+  const offsets = [0];
+  for (let i = 1; i < points.length; i++) {
+    offsets.push(offsets[i - 1] + distance(points[i - 1], points[i]));
+  }
+  return offsets;
+}
+
+function pointAtOffset(points: readonly Pt[], offsets: readonly number[], target: number): Pt {
+  const last = points.length - 1;
+  if (target <= 0) return { ...points[0] };
+  if (target >= offsets[last]) return { ...points[last] };
+  for (let i = 0; i < last; i++) {
+    if (target <= offsets[i + 1]) {
+      const span = offsets[i + 1] - offsets[i];
+      const f = span === 0 ? 0 : (target - offsets[i]) / span;
+      return {
+        x: points[i].x + (points[i + 1].x - points[i].x) * f,
+        y: points[i].y + (points[i + 1].y - points[i].y) * f,
+      };
+    }
+  }
+  return { ...points[last] };
+}
+
+function trimPolyline(
+  points: readonly Pt[],
+  offsets: readonly number[],
+  from: number,
+  to: number,
+): Pt[] {
+  const trimmed: Pt[] = [pointAtOffset(points, offsets, from)];
+  for (let i = 0; i < points.length; i++) {
+    if (offsets[i] > from && offsets[i] < to) trimmed.push({ ...points[i] });
+  }
+  trimmed.push(pointAtOffset(points, offsets, to));
+  return trimmed;
+}
+
+interface Endpoints {
+  start: Pt;
+  end: Pt;
+  /** Interior stroke points between the endpoints. */
+  middle: Pt[];
+}
+
 /**
- * Turn a fitted stroke into a cut region, or return null when the stroke is
- * neither closed on itself nor a valid edge-to-edge cut.
+ * Prefer the points where the stroke crosses the silhouette boundary as the cut
+ * endpoints (handles overshoot); otherwise fall back to snapping the endpoints
+ * to the nearest boundary point within the snap radius.
+ */
+function resolveEndpoints(
+  scope: PaperScope,
+  points: readonly Pt[],
+  silhouette: PaperPathItem,
+  options: ClosureOptions,
+): Endpoints | null {
+  const stroke = new scope.Path(points.map((point) => [point.x, point.y]));
+  const crossings = stroke.getIntersections(silhouette).sort((a, b) => a.offset - b.offset);
+
+  if (crossings.length >= 2) {
+    const from = crossings[0].offset;
+    const to = crossings[crossings.length - 1].offset;
+    if (to > from) {
+      const trimmed = trimPolyline(points, cumulativeOffsets(points), from, to);
+      if (trimmed.length >= 3) {
+        return {
+          start: trimmed[0],
+          end: trimmed[trimmed.length - 1],
+          middle: trimmed.slice(1, -1),
+        };
+      }
+    }
+  }
+
+  const start = nearestOnPath(scope, silhouette, points[0]);
+  const end = nearestOnPath(scope, silhouette, points[points.length - 1]);
+  if (start.distance > options.snapThreshold || end.distance > options.snapThreshold) return null;
+
+  return { start: start.point, end: end.point, middle: points.slice(1, -1) };
+}
+
+/**
+ * Turn a fitted stroke into a cut region, or null when the stroke is neither
+ * closed on itself nor a valid edge-to-edge cut.
  *
  * - Near-closed strokes become a region directly.
- * - Otherwise both endpoints must snap to a silhouette edge, and the straight
- *   chord between them must follow that boundary (so the region is bounded by
- *   the edge). Corner-spanning or interior chords are rejected.
- * - The resolved region is clipped to the current black silhouette: you can
- *   only cut what is black.
+ * - Otherwise the endpoints come from where the stroke crosses the silhouette
+ *   (falling back to snapping nearby endpoints), the closing chord must follow
+ *   the boundary, and the region is clipped to the current black silhouette.
  */
 export function closeRegion(
   scope: PaperScope,
@@ -110,42 +231,17 @@ export function closeRegion(
   const points = dedupe(fitted);
   if (points.length < 3) return null;
 
-  let closedPoints: Pt[];
-  let snapPoints: Pt[] = [];
-  let kind: ClosureKind;
-
-  const isClosed = distance(points[0], points[points.length - 1]) <= options.closeThreshold;
-
-  if (isClosed) {
-    kind = 'self';
-    closedPoints = points.slice(0, -1); // drop the duplicated endpoint
-  } else {
-    const start = nearestOnPath(scope, silhouette, points[0]);
-    const end = nearestOnPath(scope, silhouette, points[points.length - 1]);
-    if (start.distance > options.snapThreshold || end.distance > options.snapThreshold) {
-      return null;
-    }
-
-    kind = 'edge';
-    closedPoints = points.slice();
-    closedPoints[0] = start.point;
-    closedPoints[closedPoints.length - 1] = end.point;
-    snapPoints = [start.point, end.point];
-
-    if (
-      !chordFollowsBoundary(scope, silhouette, start.point, end.point, options.boundaryTolerance)
-    ) {
-      return null;
-    }
+  if (distance(points[0], points[points.length - 1]) <= options.closeThreshold) {
+    const region = clipToSilhouette(scope, points.slice(0, -1), silhouette, options);
+    return region ? { kind: 'self', region, snapPoints: [] } : null;
   }
 
-  if (closedPoints.length < 3) return null;
+  const endpoints = resolveEndpoints(scope, points, silhouette, options);
+  if (!endpoints) return null;
 
-  const clipped = pathFromPoints(scope, closedPoints).intersect(silhouette);
-  if (!clipped || areaOf(clipped) < options.minArea) return null;
+  const { start, end, middle } = endpoints;
+  if (!chordFollowsBoundary(scope, silhouette, start, end, options.boundaryTolerance)) return null;
 
-  const region = pathToPoints(clipped);
-  if (region.length < 3) return null;
-
-  return { kind, region, snapPoints };
+  const region = clipToSilhouette(scope, [start, ...middle, end], silhouette, options);
+  return region ? { kind: 'edge', region, snapPoints: [start, end] } : null;
 }

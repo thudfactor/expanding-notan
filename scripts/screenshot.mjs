@@ -177,6 +177,33 @@ try {
     await page.waitForTimeout(150);
   }
 
+  if (interaction === 'draw-snap') {
+    const box = await page.locator('canvas').boundingBox();
+    if (!box) throw new Error('Canvas not found');
+    const scale = Math.min(
+      (box.width - VIEW_PADDING * 2) / ARTBOARD_SIZE,
+      (box.height - VIEW_PADDING * 2) / ARTBOARD_SIZE,
+    );
+    const centerX = box.x + box.width / 2;
+    const centerY = box.y + box.height / 2;
+    const toScreen = (x, y) => ({
+      x: centerX + (x - ARTBOARD_SIZE / 2) * scale,
+      y: centerY + (y - ARTBOARD_SIZE / 2) * scale,
+    });
+    const edgeX = toScreen(640, 0).x;
+    const start = toScreen(470, 360);
+    const end = { x: edgeX - 18, y: centerY }; // ~18px inside the right edge
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    const steps = 14;
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps;
+      await page.mouse.move(start.x + (end.x - start.x) * t, start.y + (end.y - start.y) * t);
+    }
+    await page.waitForTimeout(200);
+    // Leave the pointer down so the capture shows the live stroke + magnet indicator.
+  }
+
   const sample = await page.evaluate(() => {
     const canvas = document.querySelector('canvas');
     if (!(canvas instanceof HTMLCanvasElement)) return null;

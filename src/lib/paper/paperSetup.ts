@@ -31,6 +31,8 @@ export interface NotanCanvas {
   showPreviewRegion(region: readonly Pt[], snapPoints: readonly Pt[]): void;
   /** Highlight a reflection edge and preview the mirrored placement (or clear). */
   setHover(edge: Edge | null, mirroredRegion: readonly Pt[] | null): void;
+  /** Show (or clear, with radius 0) a magnet indicator at the nearest silhouette point. */
+  updateDrawSnap(point: Pt, radius: number): void;
   /** Remove any preview overlay. */
   clearPreview(): void;
   /** Fit the artboard into a viewport of the given CSS pixel size. */
@@ -64,6 +66,7 @@ export function createNotanCanvas(canvas: HTMLCanvasElement): NotanCanvas {
   let snapDots: PaperItem | undefined;
   let edgeHighlight: PaperPathItem | undefined;
   let reflectionPreview: PaperPathItem | undefined;
+  let drawSnap: PaperItem | undefined;
   let currentOps: readonly CutOp[] = [];
 
   function bringOverlayForward(): void {
@@ -140,6 +143,7 @@ export function createNotanCanvas(canvas: HTMLCanvasElement): NotanCanvas {
     previewRegion = undefined;
     snapDots = undefined;
     clearHover();
+    clearDrawSnap();
 
     const fill = new scope.Color(ACCENT);
     fill.alpha = 0.3;
@@ -174,6 +178,7 @@ export function createNotanCanvas(canvas: HTMLCanvasElement): NotanCanvas {
     previewRegion = undefined;
     snapDots = undefined;
     clearHover();
+    clearDrawSnap();
   }
 
   function clearHover(): void {
@@ -219,6 +224,32 @@ export function createNotanCanvas(canvas: HTMLCanvasElement): NotanCanvas {
     edgeHighlight.bringToFront();
   }
 
+  function clearDrawSnap(): void {
+    drop(drawSnap);
+    drawSnap = undefined;
+  }
+
+  function updateDrawSnap(point: Pt, radius: number): void {
+    clearDrawSnap();
+    if (!silhouette || radius <= 0) return;
+
+    const target = new scope.Point(point.x, point.y);
+    const nearest = silhouette.getNearestPoint(target);
+    if (target.getDistance(nearest) > radius) return;
+
+    const group = new scope.Group();
+    const ring = new scope.Path.Circle({ center: [nearest.x, nearest.y], radius: 7 });
+    ring.strokeColor = new scope.Color(ACCENT);
+    ring.strokeWidth = 2;
+    const dot = new scope.Path.Circle({ center: [nearest.x, nearest.y], radius: 2.5 });
+    dot.fillColor = new scope.Color(ACCENT);
+    group.addChild(ring);
+    group.addChild(dot);
+    layer.addChild(group);
+    drawSnap = group;
+    drawSnap.bringToFront();
+  }
+
   function resize(width: number, height: number): void {
     const w = Math.max(1, Math.round(width));
     const h = Math.max(1, Math.round(height));
@@ -241,6 +272,7 @@ export function createNotanCanvas(canvas: HTMLCanvasElement): NotanCanvas {
     setLiveStroke,
     showPreviewRegion,
     setHover,
+    updateDrawSnap,
     clearPreview,
     resize,
     destroy,

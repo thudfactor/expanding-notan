@@ -5,11 +5,17 @@
   import { ARTBOARD_SIZE, squareRect } from '../geometry/artboard';
   import { getFitter } from '../geometry/fit';
   import { intersectsArtboard, mirrorPoints } from '../geometry/math';
-  import { DEFAULT_CLOSURE, closeRegion } from '../geometry/tracing';
+  import { DEFAULT_CLOSURE_PX, closeRegion, closureOptionsFromScale } from '../geometry/tracing';
   import { DEFAULT_FIT_OPTIONS, type CutOp, type Edge, type Pt } from '../geometry/types';
   import { addCut, getOps, getSeamVisible } from '../state/project.svelte';
 
   const STRATEGY = 'spline';
+
+  // Artboard units per CSS pixel, so grab radii can be expressed in pixels.
+  function unitsPerPx(): number {
+    const zoom = notan?.view.zoom ?? 1;
+    return zoom > 0 ? 1 / zoom : 1;
+  }
 
   let host: HTMLDivElement | undefined;
   let canvas: HTMLCanvasElement | undefined;
@@ -72,6 +78,8 @@
       capture.push(point);
       notan.setLiveStroke(capture);
     }
+    // Magnet indicator: show when the pointer is near the silhouette boundary.
+    notan.updateDrawSnap(point, DEFAULT_CLOSURE_PX.snapRadiusPx * unitsPerPx());
   }
 
   function onPointerUp(event: PointerEvent): void {
@@ -87,7 +95,12 @@
     if (!silhouette) return;
 
     const fitted = getFitter(STRATEGY).fit(capture, DEFAULT_FIT_OPTIONS);
-    const result = closeRegion(notan.scope, fitted, silhouette, DEFAULT_CLOSURE);
+    const result = closeRegion(
+      notan.scope,
+      fitted,
+      silhouette,
+      closureOptionsFromScale(unitsPerPx()),
+    );
 
     if (!result) {
       hint = 'A cut must close on itself or start and end on an edge.';

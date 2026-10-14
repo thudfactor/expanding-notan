@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { squareRect } from './artboard';
 import { buildSilhouette, createHeadlessScope } from './engine';
 import { mirrorPoints, polygonArea } from './math';
-import { closeRegion } from './tracing';
+import { closeRegion, closureOptionsFromScale } from './tracing';
 import type { Pt } from './types';
 
 const SQUARE = squareRect();
@@ -94,5 +94,32 @@ describe('closeRegion', () => {
       { x: 400, y: 400 },
     ];
     expect(closeRegion(scope, tiny, silhouette)).toBeNull();
+  });
+
+  it('accepts a stroke that overshoots the edge, using the crossings as endpoints', () => {
+    const { scope, silhouette } = spot();
+    // Both endpoints sit 50 units past the right edge (x = 640) — well beyond the
+    // default 20-unit snap radius, so this only works via boundary crossings.
+    const stroke: Pt[] = [
+      { x: 690, y: 360 },
+      { x: 560, y: 430 },
+      { x: 560, y: 470 },
+      { x: 690, y: 520 },
+    ];
+    const result = closeRegion(scope, stroke, silhouette);
+
+    expect(result?.kind).toBe('edge');
+    expect(result!.snapPoints[0].x).toBeCloseTo(640);
+    expect(result!.snapPoints[1].x).toBeCloseTo(640);
+    expect(Math.max(...result!.region.map((point) => point.x))).toBeCloseTo(640);
+    expect(polygonArea(result!.region)).toBeGreaterThan(1000);
+  });
+});
+
+describe('closureOptionsFromScale', () => {
+  it('converts pixel radii into artboard units', () => {
+    const options = closureOptionsFromScale(1.5, { closeRadiusPx: 20, snapRadiusPx: 30 });
+    expect(options.closeThreshold).toBeCloseTo(30);
+    expect(options.snapThreshold).toBeCloseTo(45);
   });
 });
