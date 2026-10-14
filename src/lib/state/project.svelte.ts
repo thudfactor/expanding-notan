@@ -5,31 +5,32 @@ import { clearRaw, createSnapshot, parseSnapshot, readRaw, writeRaw, type Projec
 
 const SAVE_DELAY = 400;
 
-const extras: ProjectExtras = {
-  artboardSide: ARTBOARD_SIZE,
-  fitDefaults: DEFAULT_FIT_OPTIONS,
-  seamVisible: true,
-};
-
-function initialHistory(): history.History {
-  const saved = parseSnapshot(readRaw());
-  return saved ? saved.history : history.createHistory();
-}
+const saved = parseSnapshot(readRaw());
 
 /**
  * App-facing project state: a runes store wrapping the pure snapshot history and
  * persisting to localStorage. `$state.raw` avoids deep-proxying the geometry.
  */
-let state = $state.raw<history.History>(initialHistory());
+let state = $state.raw<history.History>(saved ? saved.history : history.createHistory());
+let seamVisible = $state.raw(saved ? saved.seamVisible : true);
 
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
+
+function currentSnapshot() {
+  const extras: ProjectExtras = {
+    artboardSide: ARTBOARD_SIZE,
+    fitDefaults: DEFAULT_FIT_OPTIONS,
+    seamVisible,
+  };
+  return createSnapshot(state, extras);
+}
 
 function saveNow(): void {
   if (saveTimer !== undefined) {
     clearTimeout(saveTimer);
     saveTimer = undefined;
   }
-  writeRaw(JSON.stringify(createSnapshot(state, extras)));
+  writeRaw(JSON.stringify(currentSnapshot()));
 }
 
 /** Debounced autosave, triggered by every mutation. */
@@ -52,6 +53,11 @@ export function canRedo(): boolean {
   return history.canRedo(state);
 }
 
+/** Whether construction-line seams are shown. */
+export function getSeamVisible(): boolean {
+  return seamVisible;
+}
+
 /** Append a committed cut. */
 export function addCut(op: CutOp): void {
   state = history.push(state, op);
@@ -68,6 +74,11 @@ export function redo(): void {
   scheduleSave();
 }
 
+export function toggleSeams(): void {
+  seamVisible = !seamVisible;
+  scheduleSave();
+}
+
 /** Clear the project and its stored data (used by "New project"). */
 export function resetProject(): void {
   if (saveTimer !== undefined) {
@@ -75,5 +86,6 @@ export function resetProject(): void {
     saveTimer = undefined;
   }
   state = history.createHistory();
+  seamVisible = true;
   clearRaw();
 }

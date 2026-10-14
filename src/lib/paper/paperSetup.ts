@@ -1,6 +1,11 @@
 import Paper from 'paper';
 import { ARTBOARD_SIZE, artboardRect, fitScale } from '../geometry/artboard';
-import { buildSilhouette, type PaperPathItem, type PaperScope } from '../geometry/engine';
+import {
+  buildSeamOutlines,
+  buildSilhouette,
+  type PaperPathItem,
+  type PaperScope,
+} from '../geometry/engine';
 import type { CutOp, Pt } from '../geometry/types';
 
 /** Viewport padding (CSS px) left around the fitted artboard. */
@@ -15,8 +20,8 @@ export interface NotanCanvas {
   readonly scope: PaperScope;
   readonly project: PaperProject;
   readonly view: PaperView;
-  /** Rebuild the black silhouette from the operation log. */
-  setOps(ops: readonly CutOp[]): void;
+  /** Rebuild the silhouette and seams from the operation log. */
+  setScene(ops: readonly CutOp[], seamVisible: boolean): void;
   /** The current black silhouette, used for snapping and clipping. */
   getSilhouette(): PaperPathItem | undefined;
   /** Draw the in-progress freehand stroke. */
@@ -50,9 +55,11 @@ export function createNotanCanvas(canvas: HTMLCanvasElement): NotanCanvas {
   layer.addChild(background);
 
   let silhouette: PaperPathItem | undefined;
+  let seamGroup: PaperItem | undefined;
   let previewStroke: PaperPathItem | undefined;
   let previewRegion: PaperPathItem | undefined;
   let snapDots: PaperItem | undefined;
+  let currentOps: readonly CutOp[] = [];
 
   function bringOverlayForward(): void {
     previewStroke?.bringToFront();
@@ -60,13 +67,40 @@ export function createNotanCanvas(canvas: HTMLCanvasElement): NotanCanvas {
     snapDots?.bringToFront();
   }
 
-  function setOps(ops: readonly CutOp[]): void {
+  function renderSeams(seamVisible: boolean): void {
+    seamGroup?.remove();
+    seamGroup = undefined;
+    if (!seamVisible) return;
+
+    const color = new scope.Color('#9ca3af');
+    color.alpha = 0.9;
+
+    const group = new scope.Group();
+    for (const outline of buildSeamOutlines(scope, currentOps)) {
+      outline.fillColor = null;
+      outline.strokeColor = color;
+      outline.strokeWidth = 1.25;
+      group.addChild(outline);
+    }
+    layer.addChild(group);
+    seamGroup = group;
+  }
+
+  function setScene(ops: readonly CutOp[], seamVisible: boolean): void {
+    currentOps = ops;
+
     silhouette?.remove();
+    silhouette = undefined;
+    seamGroup?.remove();
+    seamGroup = undefined;
+
     const next = buildSilhouette(scope, ops);
     next.fillColor = new scope.Color('#111111');
     next.name = 'silhouette';
     layer.addChild(next);
     silhouette = next;
+
+    renderSeams(seamVisible);
     bringOverlayForward();
   }
 
@@ -152,7 +186,7 @@ export function createNotanCanvas(canvas: HTMLCanvasElement): NotanCanvas {
     scope,
     project,
     view,
-    setOps,
+    setScene,
     getSilhouette,
     setLiveStroke,
     showPreviewRegion,

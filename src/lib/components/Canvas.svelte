@@ -5,7 +5,7 @@
   import { getFitter } from '../geometry/fit';
   import { DEFAULT_CLOSURE, closeRegion } from '../geometry/tracing';
   import { DEFAULT_FIT_OPTIONS, type CutOp, type Edge, type Pt } from '../geometry/types';
-  import { addCut, getOps } from '../state/project.svelte';
+  import { addCut, getOps, getSeamVisible } from '../state/project.svelte';
 
   const STRATEGY = 'spline';
 
@@ -133,9 +133,9 @@
     };
   });
 
-  // Rebuild the silhouette whenever the operation log changes.
+  // Rebuild the scene whenever the operation log or seam visibility changes.
   $effect(() => {
-    notan?.setOps(getOps());
+    notan?.setScene(getOps(), getSeamVisible());
   });
 </script>
 

@@ -49,3 +49,23 @@ export function buildSilhouette(
 
   return silhouette;
 }
+
+/**
+ * Construction-line outlines for the seam layer: the boundary of each cut region
+ * and of each mirrored copy. Returned unstyled; the caller decides how to stroke
+ * them. Toggling seams never changes the silhouette.
+ */
+export function buildSeamOutlines(
+  scope: PaperScope,
+  ops: readonly CutOp[],
+  square: Rect = squareRect(),
+): PaperPathItem[] {
+  const outlines: PaperPathItem[] = [];
+  for (const op of ops) {
+    outlines.push(pathFromPoints(scope, op.region));
+    if (op.reflect) {
+      outlines.push(pathFromPoints(scope, mirrorPoints(op.region, op.reflect, square)));
+    }
+  }
+  return outlines;
+}

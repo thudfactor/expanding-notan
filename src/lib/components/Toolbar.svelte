@@ -1,6 +1,14 @@
 <script lang="ts">
   import ConfirmDialog from './ConfirmDialog.svelte';
-  import { canRedo, canUndo, redo, resetProject, undo } from '../state/project.svelte';
+  import {
+    canRedo,
+    canUndo,
+    getSeamVisible,
+    redo,
+    resetProject,
+    toggleSeams,
+    undo,
+  } from '../state/project.svelte';
 
   let confirmNew = $state(false);
 </script>
@@ -8,6 +16,7 @@
 <div class="toolbar" role="toolbar" aria-label="Edit actions">
   <button type="button" disabled={!canUndo()} onclick={undo}>Undo</button>
   <button type="button" disabled={!canRedo()} onclick={redo}>Redo</button>
+  <button type="button" aria-pressed={getSeamVisible()} onclick={toggleSeams}>Seams</button>
   <button type="button" onclick={() => (confirmNew = true)}>New project</button>
 </div>
 
@@ -44,6 +53,16 @@
   button:disabled {
     opacity: 0.45;
     cursor: default;
+  }
+
+  button[aria-pressed='true'] {
+    border-color: #2563eb;
+    background: #2563eb;
+    color: #fff;
+  }
+
+  button[aria-pressed='true']:hover {
+    background: #2563eb;
   }
 
   button:focus-visible {

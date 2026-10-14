@@ -75,15 +75,22 @@ try {
   await page.goto(url, { waitUntil: 'load' });
   await page.waitForSelector('body[data-notan-ready="true"]', { timeout: 15000 });
 
-  if (interaction === 'draw' || interaction === 'commit' || interaction === 'undo' || interaction === 'reload') {
+  const doDraw = ['draw', 'commit', 'undo', 'reload', 'seams-off'].includes(interaction);
+  const doCommit = ['commit', 'undo', 'reload', 'seams-off'].includes(interaction);
+
+  if (doDraw) {
     await drawCut(page);
   }
-  if (interaction === 'commit' || interaction === 'undo' || interaction === 'reload') {
+  if (doCommit) {
     await page.getByRole('button', { name: 'Reflect right' }).click();
     await page.waitForTimeout(150);
   }
   if (interaction === 'undo') {
     await page.getByRole('button', { name: 'Undo' }).click();
+    await page.waitForTimeout(150);
+  }
+  if (interaction === 'seams-off') {
+    await page.getByRole('button', { name: 'Seams' }).click();
     await page.waitForTimeout(150);
   }
   if (interaction === 'reload') {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { squareRect } from './artboard';
-import { buildSilhouette, createHeadlessScope, type PaperPathItem } from './engine';
+import { buildSeamOutlines, buildSilhouette, createHeadlessScope, type PaperPathItem } from './engine';
 import { DEFAULT_FIT_OPTIONS, type CutOp, type Edge, type Pt } from './types';
 
 const SQUARE = squareRect(); // x: 240, y: 240, 400 x 400
@@ -104,5 +104,18 @@ describe('buildSilhouette', () => {
     const scope = createHeadlessScope();
     buildSilhouette(scope, [op(rect(540, 400, 100, 80), 'right')]);
     expect(scope.project.activeLayer.children.length).toBe(0);
+  });
+});
+
+describe('buildSeamOutlines', () => {
+  it('returns one outline per region and one per mirror', () => {
+    expect(buildSeamOutlines(createHeadlessScope(), []).length).toBe(0);
+    expect(buildSeamOutlines(createHeadlessScope(), [op(rect(540, 400, 100, 80), null)]).length).toBe(1);
+
+    const reflected = buildSeamOutlines(createHeadlessScope(), [op(rect(540, 400, 100, 80), 'right')]);
+    expect(reflected.length).toBe(2);
+    expect(Math.abs(areaOf(reflected[0]))).toBeCloseTo(8000);
+    // The mirrored outline is congruent with the region (winding is flipped).
+    expect(Math.abs(areaOf(reflected[1]))).toBeCloseTo(8000);
   });
 });
