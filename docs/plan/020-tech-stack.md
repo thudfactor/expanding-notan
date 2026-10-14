@@ -37,3 +37,33 @@ Export uses its own scale factor (default 2×) independent of the display scale.
   `overlay` (snap guides).
 - Boolean operations via Paper.js (`subtract`, `unite`) on the silhouette.
 - SVG export via `project.exportSVG`; PNG produced by rasterizing the SVG (see `060-export.md`).
+
+## Developer environment: browser MCP (optional)
+
+For interactive browser inspection while developing, a Playwright MCP server can be
+configured globally in `~/.config/opencode/opencode.jsonc` (local stdio, no OAuth):
+
+```jsonc
+{
+  "mcp": {
+    "servers": {
+      "playwright": {
+        "type": "local",
+        "command": [
+          "npx",
+          "-y",
+          "@playwright/mcp@latest",
+          "--headless",
+          "--isolated",
+          "--browser",
+          "chromium",
+        ],
+      },
+    },
+  },
+}
+```
+
+`--browser chromium` uses the bundled Chrome for Testing instead of the Google Chrome
+channel. This is a developer convenience and is separate from the committed screenshot
+script (`npm run shot`), which stays the deterministic, version-controlled capture path.
