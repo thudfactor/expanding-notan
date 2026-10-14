@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { ISSUES_URL, REPO_URL } from '../links';
+
   let { open = $bindable(false) }: { open?: boolean } = $props();
 
   let dialog: HTMLDialogElement | undefined;
@@ -63,7 +65,11 @@
     </ul>
   </section>
 
-  <div class="actions">
+  <div class="footer">
+    <nav class="links" aria-label="Project links">
+      <a href={REPO_URL} target="_blank" rel="noopener noreferrer">GitHub repo</a>
+      <a href={ISSUES_URL} target="_blank" rel="noopener noreferrer">Bugs / suggestions</a>
+    </nav>
     <button type="button" onclick={() => (open = false)}>Close</button>
   </div>
 </dialog>
@@ -108,13 +114,30 @@
     padding-left: 1.25rem;
   }
 
-  .actions {
+  .footer {
     display: flex;
-    justify-content: flex-end;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
     margin-top: 1.25rem;
   }
 
-  .actions button {
+  .links {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.875rem;
+  }
+
+  .links a {
+    color: #2563eb;
+    text-decoration: none;
+  }
+
+  .links a:hover {
+    text-decoration: underline;
+  }
+
+  .footer button {
     padding: 0.4375rem 0.875rem;
     border: 1px solid rgba(0, 0, 0, 0.2);
     border-radius: 0.375rem;
@@ -125,7 +148,7 @@
     cursor: pointer;
   }
 
-  .actions button:focus-visible {
+  .footer button:focus-visible {
     outline: 2px solid #2563eb;
     outline-offset: 2px;
   }

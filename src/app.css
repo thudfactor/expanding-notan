@@ -53,3 +53,23 @@ body {
   flex: 1 1 auto;
   min-height: 0;
 }
+
+.app__footer {
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 0.375rem 1rem;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  font-size: 0.8125rem;
+}
+
+.app__footer a {
+  color: #4b5563;
+  text-decoration: none;
+}
+
+.app__footer a:hover {
+  text-decoration: underline;
+}
