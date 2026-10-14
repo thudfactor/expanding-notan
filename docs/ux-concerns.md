@@ -9,6 +9,7 @@ the milestone or commit that resolved it.
 | 1 | Open | Commit bar | Reflection button labels are confusing when reflecting an expanded cut | 2026-10-14 |
 | 2 | Open | Drawing | Tolerances for recognizing start/stop points on an edge are too small | 2026-10-14 |
 | 3 | Open | Seams | Seam lines are barely visible for simple cuts | 2026-10-14 |
+| 4 | Open | Onboarding | New users don't know what they are expected to do | 2026-10-14 |
 
 ## 1. Reflection button labels are confusing when reflecting an expanded cut
 
@@ -76,3 +77,25 @@ Options to consider later:
 
 Note: purely a rendering/legibility concern; the seam layer is already separate from the
 silhouette and never alters the artwork.
+
+## 4. New users don't know what they are expected to do
+
+- **Status:** Open
+- **Area:** Onboarding
+- **Raised:** 2026-10-14
+
+On a first visit the app shows just a black square with no guidance, so a new user may not
+realise they should draw a freehand cut and then reflect it.
+
+**Proposed (simplest) answer:** if there is no saved project, auto-open the Help dialog on
+load.
+
+Notes / things to get right:
+
+- "No saved project" means `parseSnapshot(readRaw())` returns `null` at startup.
+- The save is only written on the first mutation, so a user who opens the app, reads Help,
+  and leaves without drawing still has no saved data — Help would appear again next time.
+  That may be acceptable, or a separate one-time "help seen" flag could suppress repeats.
+- Only auto-open on first load; never when a saved project exists.
+- The Help dialog already covers the rules and controls (M9), so no new content is needed.
+- Consider pairing with a subtle on-canvas hint ("Drag to cut") for extra clarity.
