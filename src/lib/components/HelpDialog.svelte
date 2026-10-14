@@ -5,8 +5,13 @@
 
   $effect(() => {
     if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    else if (!open && dialog.open) dialog.close();
+    if (open && !dialog.open) {
+      dialog.showModal();
+      // Native modal focus can scroll to the Close button; show the top.
+      dialog.scrollTop = 0;
+    } else if (!open && dialog.open) {
+      dialog.close();
+    }
   });
 </script>
 
@@ -34,7 +39,11 @@
         <strong>start and end on an edge</strong>.</li>
       <li>Reflect a cut across the <strong>left, right, top, or bottom</strong> edge of the
         original square.</li>
-      <li>Cut pieces can be cut again and reflected further outward.</li>
+      <li>Cut pieces can be cut again. Reflect a new cut across any of the square's four
+        edges.</li>
+      <li>Reflections always use a square edge, so reflecting an outside piece across the
+        <em>same</em> edge brings it back toward the square (a toggle) rather than pushing
+        it further out.</li>
       <li>Following the rules of Notan is up to you — the tool will not enforce them.</li>
     </ul>
   </section>
