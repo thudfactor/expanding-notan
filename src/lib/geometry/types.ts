@@ -27,6 +27,12 @@ export type FitStrategyId = 'spline';
 export interface CutOp {
   id: string;
   rawPoints: Pt[];
+  /**
+   * Resolved cut region in artboard units. Derived from `rawPoints` + `fit`
+   * (then closed against the silhouette) when the cut is committed; stored so
+   * replay is deterministic. `rawPoints` is retained for future re-fitting.
+   */
+  region: Pt[];
   fit: { strategy: FitStrategyId; options: FitOptions };
   /** Edge to mirror across, or `null` for a hole with no reflection. */
   reflect: Edge | null;

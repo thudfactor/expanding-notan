@@ -12,10 +12,14 @@ editing (moving or rotating cuts).
 ## Decision
 
 The single source of truth is an ordered list of cut operations (`CutOp[]`). Each op holds
-its raw freehand points, its fitting settings, and the reflection edge (or `null`). The
-rendered silhouette is derived by replaying the log: start from the square, `subtract`
-each op's region, and when reflecting `unite` the region mirrored across the chosen square
-edge. Derived geometry is never persisted — only the op log is.
+its raw freehand points, its fitting settings, its resolved cut `region`, and the
+reflection edge (or `null`). The rendered silhouette is derived by replaying the log: start
+from the square, `subtract` each op's region, and when reflecting `unite` the region
+mirrored across the chosen square edge.
+
+`region` is the committed piece boundary (authored at cut time; see ADRs 0009/0011), while
+`rawPoints` + `fit` are retained for future re-fitting. Derived *rendering* geometry (the
+boolean silhouette, mirrored copies) is never persisted.
 
 Replay is implemented by `buildSilhouette` in `src/lib/geometry/engine.ts`, using a Paper
 scope. The pure math (mirror, area, projection) lives in `src/lib/geometry/math.ts` with no

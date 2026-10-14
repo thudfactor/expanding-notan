@@ -18,6 +18,7 @@ type FitStrategyId = 'spline'; // registry supports more later ('raw', 'polyline
 interface CutOp {
   id: string;
   rawPoints: Pt[];                                    // canonical freehand input
+  region: Pt[];                                       // resolved cut region (committed)
   fit: { strategy: FitStrategyId; options: FitOptions };
   reflect: Edge | null;                               // null = "Hole only"
 }
@@ -34,8 +35,9 @@ interface ProjectState {
 
 ## Notes
 
-- `rawPoints` is the source of truth; the cut region is derived by fitting then closing
-  against the silhouette (see `030-architecture.md`).
+- `rawPoints` is the canonical input; `region` is the resolved cut boundary (fitted then
+  closed against the silhouette, then stored) so replay is deterministic (see ADRs
+  0009/0011). `rawPoints` + `fit` are retained for future non-destructive re-fitting.
 - Reflected-copy geometry is **not** stored; it is recomputed by replaying `ops`.
 - `history.states` holds snapshots of `ops` only (settings are not part of undo).
 - Keep `op.id` stable so previews, seams, and future per-op selection can reference ops.

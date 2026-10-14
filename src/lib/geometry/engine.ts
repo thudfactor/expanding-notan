@@ -21,7 +21,7 @@ function pathFromRect(scope: PaperScope, rect: Rect): PaperPathItem {
   return new scope.Path.Rectangle(rect);
 }
 
-function pathFromPoints(scope: PaperScope, points: readonly Pt[]): PaperPathItem {
+export function pathFromPoints(scope: PaperScope, points: readonly Pt[]): PaperPathItem {
   const path = new scope.Path(points.map((p) => [p.x, p.y]));
   path.closed = true;
   return path;
@@ -40,9 +40,9 @@ export function buildSilhouette(
   let silhouette: PaperPathItem = pathFromRect(scope, square);
 
   for (const op of ops) {
-    silhouette = silhouette.subtract(pathFromPoints(scope, op.rawPoints));
+    silhouette = silhouette.subtract(pathFromPoints(scope, op.region));
     if (op.reflect) {
-      const mirrored = pathFromPoints(scope, mirrorPoints(op.rawPoints, op.reflect, square));
+      const mirrored = pathFromPoints(scope, mirrorPoints(op.region, op.reflect, square));
       silhouette = silhouette.unite(mirrored);
     }
   }

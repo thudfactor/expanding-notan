@@ -17,6 +17,7 @@ function op(rawPoints: Pt[], reflect: Edge | null): CutOp {
   return {
     id: `op-${counter}`,
     rawPoints,
+    region: rawPoints,
     fit: { strategy: 'spline', options: DEFAULT_FIT_OPTIONS },
     reflect,
   };

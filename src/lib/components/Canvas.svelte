@@ -1,14 +1,79 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { createNotanCanvas, type NotanCanvas } from '../paper/paperSetup';
-  import type { CutOp } from '../geometry/types';
+  import { getFitter } from '../geometry/fit';
+  import { DEFAULT_CLOSURE, closeRegion } from '../geometry/tracing';
+  import { DEFAULT_FIT_OPTIONS, type CutOp, type Pt } from '../geometry/types';
 
   let { ops = [] }: { ops?: readonly CutOp[] } = $props();
+
+  const STRATEGY = 'spline';
 
   let host: HTMLDivElement | undefined;
   let canvas: HTMLCanvasElement | undefined;
   // `$state.raw` keeps Paper.js objects uninstrumented by Svelte's proxy.
   let notan = $state.raw<NotanCanvas | undefined>(undefined);
+  let hint = $state('');
+
+  let drawing = false;
+  let capture: Pt[] = [];
+
+  function toArtboard(event: PointerEvent): Pt | undefined {
+    if (!notan || !canvas) return undefined;
+    const bounds = canvas.getBoundingClientRect();
+    const viewPoint = new notan.scope.Point(
+      event.clientX - bounds.left,
+      event.clientY - bounds.top,
+    );
+    const point = notan.view.viewToProject(viewPoint);
+    return { x: point.x, y: point.y };
+  }
+
+  function onPointerDown(event: PointerEvent): void {
+    if (!notan || event.button !== 0) return;
+    const point = toArtboard(event);
+    if (!point) return;
+
+    drawing = true;
+    capture = [point];
+    hint = '';
+    canvas?.setPointerCapture(event.pointerId);
+    notan.clearPreview();
+    notan.setLiveStroke(capture);
+  }
+
+  function onPointerMove(event: PointerEvent): void {
+    if (!drawing || !notan) return;
+    const point = toArtboard(event);
+    if (!point) return;
+
+    const last = capture[capture.length - 1];
+    if (Math.hypot(point.x - last.x, point.y - last.y) >= DEFAULT_FIT_OPTIONS.minDistance) {
+      capture.push(point);
+      notan.setLiveStroke(capture);
+    }
+  }
+
+  function onPointerUp(event: PointerEvent): void {
+    if (!drawing || !notan) return;
+    drawing = false;
+    canvas?.releasePointerCapture(event.pointerId);
+
+    const silhouette = notan.getSilhouette();
+    if (!silhouette) return;
+
+    const fitted = getFitter(STRATEGY).fit(capture, DEFAULT_FIT_OPTIONS);
+    const result = closeRegion(notan.scope, fitted, silhouette, DEFAULT_CLOSURE);
+
+    if (!result) {
+      hint = 'A cut must close on itself or start and end on an edge.';
+      notan.clearPreview();
+      return;
+    }
+
+    // M4 will turn this preview into a commit bar (Reflect L/R/U/D, Hole only).
+    notan.showPreviewRegion(result.region, result.snapPoints);
+  }
 
   onMount(() => {
     if (!canvas || !host) return;
@@ -46,7 +111,17 @@
 </script>
 
 <div class="canvas-host" bind:this={host}>
-  <canvas bind:this={canvas} aria-label="Notan drawing area"></canvas>
+  <canvas
+    bind:this={canvas}
+    aria-label="Notan drawing area"
+    onpointerdown={onPointerDown}
+    onpointermove={onPointerMove}
+    onpointerup={onPointerUp}
+    onpointercancel={onPointerUp}
+  ></canvas>
+  {#if hint}
+    <p class="hint" role="status">{hint}</p>
+  {/if}
 </div>
 
 <style>
@@ -61,5 +136,18 @@
     height: 100%;
     touch-action: none;
     cursor: crosshair;
+  }
+
+  .hint {
+    position: absolute;
+    bottom: 1rem;
+    left: 50%;
+    margin: 0;
+    padding: 0.5rem 0.75rem;
+    transform: translateX(-50%);
+    border-radius: 0.375rem;
+    background: rgba(17, 17, 17, 0.85);
+    color: #fff;
+    font-size: 0.875rem;
   }
 </style>

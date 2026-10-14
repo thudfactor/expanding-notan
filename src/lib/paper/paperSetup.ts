@@ -1,13 +1,15 @@
 import Paper from 'paper';
 import { ARTBOARD_SIZE, artboardRect, fitScale } from '../geometry/artboard';
 import { buildSilhouette, type PaperPathItem, type PaperScope } from '../geometry/engine';
-import type { CutOp } from '../geometry/types';
+import type { CutOp, Pt } from '../geometry/types';
 
 /** Viewport padding (CSS px) left around the fitted artboard. */
 const VIEW_PADDING = 16;
+const ACCENT = '#2563eb';
 
 export type PaperProject = InstanceType<typeof Paper.Project>;
 export type PaperView = InstanceType<typeof Paper.View>;
+export type PaperItem = InstanceType<typeof Paper.Item>;
 
 export interface NotanCanvas {
   readonly scope: PaperScope;
@@ -15,6 +17,14 @@ export interface NotanCanvas {
   readonly view: PaperView;
   /** Rebuild the black silhouette from the operation log. */
   setOps(ops: readonly CutOp[]): void;
+  /** The current black silhouette, used for snapping and clipping. */
+  getSilhouette(): PaperPathItem | undefined;
+  /** Draw the in-progress freehand stroke. */
+  setLiveStroke(points: readonly Pt[]): void;
+  /** Show a resolved cut region preview with its snap points. */
+  showPreviewRegion(region: readonly Pt[], snapPoints: readonly Pt[]): void;
+  /** Remove any preview overlay. */
+  clearPreview(): void;
   /** Fit the artboard into a viewport of the given CSS pixel size. */
   resize(width: number, height: number): void;
   destroy(): void;
@@ -22,8 +32,8 @@ export interface NotanCanvas {
 
 /**
  * Create the Paper.js scene for the artboard: a white board with the black
- * silhouette derived from the operation log. Geometry is kept in logical
- * artboard units; the view scales it to fit the viewport.
+ * silhouette derived from the operation log, plus an overlay for interactive
+ * previews. Geometry is kept in logical artboard units.
  */
 export function createNotanCanvas(canvas: HTMLCanvasElement): NotanCanvas {
   const scope = new Paper.PaperScope();
@@ -40,17 +50,89 @@ export function createNotanCanvas(canvas: HTMLCanvasElement): NotanCanvas {
   layer.addChild(background);
 
   let silhouette: PaperPathItem | undefined;
+  let previewStroke: PaperPathItem | undefined;
+  let previewRegion: PaperPathItem | undefined;
+  let snapDots: PaperItem | undefined;
+
+  function bringOverlayForward(): void {
+    previewStroke?.bringToFront();
+    previewRegion?.bringToFront();
+    snapDots?.bringToFront();
+  }
 
   function setOps(ops: readonly CutOp[]): void {
-    if (silhouette) {
-      silhouette.remove();
-      silhouette = undefined;
-    }
+    silhouette?.remove();
     const next = buildSilhouette(scope, ops);
     next.fillColor = new scope.Color('#111111');
     next.name = 'silhouette';
     layer.addChild(next);
     silhouette = next;
+    bringOverlayForward();
+  }
+
+  function getSilhouette(): PaperPathItem | undefined {
+    return silhouette;
+  }
+
+  function drop(item: PaperItem | undefined): void {
+    item?.remove();
+  }
+
+  function setLiveStroke(points: readonly Pt[]): void {
+    drop(previewStroke);
+    previewStroke = undefined;
+    if (points.length < 2) return;
+
+    const path = new scope.Path(points.map((point) => [point.x, point.y]));
+    path.strokeColor = new scope.Color(ACCENT);
+    path.strokeWidth = 1.5;
+    path.strokeCap = 'round';
+    path.strokeJoin = 'round';
+    layer.addChild(path);
+    previewStroke = path;
+    bringOverlayForward();
+  }
+
+  function showPreviewRegion(region: readonly Pt[], snapPoints: readonly Pt[]): void {
+    drop(previewStroke);
+    drop(previewRegion);
+    drop(snapDots);
+    previewStroke = undefined;
+    previewRegion = undefined;
+    snapDots = undefined;
+
+    const fill = new scope.Color(ACCENT);
+    fill.alpha = 0.3;
+
+    const regionPath = new scope.Path(region.map((point) => [point.x, point.y]));
+    regionPath.closed = true;
+    regionPath.fillColor = fill;
+    regionPath.strokeColor = new scope.Color(ACCENT);
+    regionPath.strokeWidth = 1;
+    layer.addChild(regionPath);
+    previewRegion = regionPath;
+
+    if (snapPoints.length > 0) {
+      const group = new scope.Group();
+      for (const point of snapPoints) {
+        const dot = new scope.Path.Circle({ center: [point.x, point.y], radius: 5 });
+        dot.fillColor = new scope.Color(ACCENT);
+        group.addChild(dot);
+      }
+      layer.addChild(group);
+      snapDots = group;
+    }
+
+    bringOverlayForward();
+  }
+
+  function clearPreview(): void {
+    drop(previewStroke);
+    drop(previewRegion);
+    drop(snapDots);
+    previewStroke = undefined;
+    previewRegion = undefined;
+    snapDots = undefined;
   }
 
   function resize(width: number, height: number): void {
@@ -66,5 +148,16 @@ export function createNotanCanvas(canvas: HTMLCanvasElement): NotanCanvas {
     project.remove();
   }
 
-  return { scope, project, view, setOps, resize, destroy };
+  return {
+    scope,
+    project,
+    view,
+    setOps,
+    getSilhouette,
+    setLiveStroke,
+    showPreviewRegion,
+    clearPreview,
+    resize,
+    destroy,
+  };
 }

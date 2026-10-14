@@ -45,8 +45,8 @@ docs/project_spec.md
   rendering. Keep Paper-specific code isolated here.
 - `buildSilhouette(ops)` replays the log from the initial square:
   `for op of ops: subtract(op.region); if op.reflect: unite(mirror(op.region, edge))`.
-- Region geometry is derived from `op.rawPoints` through the fitter each build, so it is
-  never persisted directly.
+- Region geometry is the resolved, committed cut boundary (`op.region`); `rawPoints` + `fit`
+  are retained so a future editor can re-fit and re-resolve non-destructively (ADR 0011).
 
 ## Pluggable stroke fitting
 

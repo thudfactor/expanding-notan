@@ -14,12 +14,24 @@ export const SAMPLE_OPS: CutOp[] = [
       { x: 640, y: 460 },
       { x: 540, y: 460 },
     ],
+    region: [
+      { x: 540, y: 380 },
+      { x: 640, y: 380 },
+      { x: 640, y: 460 },
+      { x: 540, y: 460 },
+    ],
     fit: { strategy: 'spline', options: DEFAULT_FIT_OPTIONS },
     reflect: 'right',
   },
   {
     id: 'sample-bottom',
     rawPoints: [
+      { x: 380, y: 540 },
+      { x: 460, y: 540 },
+      { x: 460, y: 640 },
+      { x: 380, y: 640 },
+    ],
+    region: [
       { x: 380, y: 540 },
       { x: 460, y: 540 },
       { x: 460, y: 640 },
