@@ -9,6 +9,7 @@
 | Language | TypeScript |
 | Geometry / rendering | Paper.js |
 | Tests | Vitest |
+| Screenshots | Playwright (headless Chromium), `npm run shot` |
 | Input | Mouse + touch/pen via pointer input |
 
 Semantic HTML wherever possible (`header`, `main`, `button`, `dialog`, `table`, etc.).

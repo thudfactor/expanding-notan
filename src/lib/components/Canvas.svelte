@@ -20,9 +20,15 @@
     const observer = new ResizeObserver(resize);
     observer.observe(hostEl);
 
+    // Signal readiness for screenshot/automation tooling after the first paint.
+    requestAnimationFrame(() => {
+      document.body.dataset.notanReady = 'true';
+    });
+
     return () => {
       observer.disconnect();
       notan.destroy();
+      delete document.body.dataset.notanReady;
     };
   });
 </script>
