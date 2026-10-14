@@ -1,19 +1,25 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { createNotanCanvas, type NotanCanvas } from '../paper/paperSetup';
+  import type { CutOp } from '../geometry/types';
+
+  let { ops = [] }: { ops?: readonly CutOp[] } = $props();
 
   let host: HTMLDivElement | undefined;
   let canvas: HTMLCanvasElement | undefined;
+  // `$state.raw` keeps Paper.js objects uninstrumented by Svelte's proxy.
+  let notan = $state.raw<NotanCanvas | undefined>(undefined);
 
   onMount(() => {
     if (!canvas || !host) return;
 
     const hostEl = host;
     const canvasEl = canvas;
-    const notan: NotanCanvas = createNotanCanvas(canvasEl);
+    const instance = createNotanCanvas(canvasEl);
+    notan = instance;
 
     const resize = () => {
-      notan.resize(hostEl.clientWidth, hostEl.clientHeight);
+      instance.resize(hostEl.clientWidth, hostEl.clientHeight);
     };
     resize();
 
@@ -27,9 +33,15 @@
 
     return () => {
       observer.disconnect();
-      notan.destroy();
+      instance.destroy();
+      notan = undefined;
       delete document.body.dataset.notanReady;
     };
+  });
+
+  // Rebuild the silhouette whenever the operation log changes.
+  $effect(() => {
+    notan?.setOps(ops);
   });
 </script>
 
