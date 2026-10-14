@@ -75,8 +75,8 @@ try {
   await page.goto(url, { waitUntil: 'load' });
   await page.waitForSelector('body[data-notan-ready="true"]', { timeout: 15000 });
 
-  const doDraw = ['draw', 'commit', 'undo', 'reload', 'seams-off'].includes(interaction);
-  const doCommit = ['commit', 'undo', 'reload', 'seams-off'].includes(interaction);
+  const doDraw = ['draw', 'commit', 'undo', 'reload', 'seams-off', 'export'].includes(interaction);
+  const doCommit = ['commit', 'undo', 'reload', 'seams-off', 'export'].includes(interaction);
 
   if (doDraw) {
     await drawCut(page);
@@ -99,6 +99,18 @@ try {
     await page.waitForSelector('body[data-notan-ready="true"]', { timeout: 15000 });
     const undoEnabled = await page.getByRole('button', { name: 'Undo' }).isEnabled();
     console.log(`After reload: Undo enabled = ${undoEnabled}`);
+    await page.waitForTimeout(150);
+  }
+  if (interaction === 'export') {
+    await page.getByRole('button', { name: 'Export' }).click();
+    const dialog = page.getByRole('dialog');
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      dialog.getByRole('button', { name: 'Export' }).click(),
+    ]);
+    const saved = resolve('docs/screenshots', `${name}-file.${download.suggestedFilename().split('.').pop()}`);
+    await download.saveAs(saved);
+    console.log(`Exported ${download.suggestedFilename()} -> ${saved}`);
     await page.waitForTimeout(150);
   }
 
