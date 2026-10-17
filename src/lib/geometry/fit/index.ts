@@ -8,4 +8,6 @@ export { decimate } from './decimate';
 export { getFitter, listFitters, registerFitter } from './registry';
 export { simplifyPoints } from './simplify';
 export { smoothPoints } from './smooth';
+export { fitPreservingTopology } from './topology';
 export type { StrokeFitter } from './registry';
+export type { TopologyFit } from './topology';

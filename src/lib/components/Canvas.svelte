@@ -3,7 +3,7 @@
   import CommitBar from './CommitBar.svelte';
   import { createNotanCanvas, type NotanCanvas } from '../paper/paperSetup';
   import { ARTBOARD_SIZE, squareRect } from '../geometry/artboard';
-  import { getFitter } from '../geometry/fit';
+  import { getFitter, fitPreservingTopology } from '../geometry/fit';
   import { intersectsArtboard, mirrorPoints, polygonArea } from '../geometry/math';
   import {
     DEFAULT_CLOSURE_PX,
@@ -12,7 +12,7 @@
     strokeCrossesItself,
     type RegionCandidate,
   } from '../geometry/tracing';
-  import { DEFAULT_FIT_OPTIONS, type CutOp, type Edge, type Pt } from '../geometry/types';
+  import { DEFAULT_FIT_OPTIONS, type CutOp, type Edge, type FitOptions, type Pt } from '../geometry/types';
   import { addCut, getOps, getSeamVisible } from '../state/project.svelte';
 
   const STRATEGY = 'spline';
@@ -29,7 +29,13 @@
   let notan = $state.raw<NotanCanvas | undefined>(undefined);
   let hint = $state('');
   let pending = $state<
-    { candidates: RegionCandidate[]; selected: number; snapPoints: Pt[]; rawPoints: Pt[] } | undefined
+    {
+      candidates: RegionCandidate[];
+      selected: number;
+      snapPoints: Pt[];
+      rawPoints: Pt[];
+      fitOptions: FitOptions;
+    } | undefined
   >(undefined);
 
   const EDGES = ['left', 'right', 'top', 'bottom'] as const;
@@ -103,16 +109,22 @@
     const silhouette = notan.getSilhouette();
     if (!silhouette) return;
 
-    const fitted = getFitter(STRATEGY).fit(capture, DEFAULT_FIT_OPTIONS);
     const options = closureOptionsFromScale(unitsPerPx());
+    const crosses = (points: readonly Pt[]): boolean => strokeCrossesItself(points, options);
+    const fitted = fitPreservingTopology(
+      capture,
+      getFitter(STRATEGY),
+      DEFAULT_FIT_OPTIONS,
+      crosses,
+    );
 
-    if (strokeCrossesItself(fitted, options)) {
+    if (crosses(fitted.points)) {
       hint = 'A cut cannot cross itself.';
       notan.clearPreview();
       return;
     }
 
-    const result = closeRegion(notan.scope, fitted, silhouette, options);
+    const result = closeRegion(notan.scope, fitted.points, silhouette, options);
 
     if (!result) {
       hint = 'A cut must close on itself or start and end on an edge.';
@@ -130,6 +142,7 @@
       selected: 0,
       snapPoints: result.snapPoints,
       rawPoints: capture.slice(),
+      fitOptions: fitted.options,
     };
     notan.showPreviewRegion(candidates[0].region, result.snapPoints);
   }
@@ -148,7 +161,7 @@
       id: crypto.randomUUID(),
       rawPoints: pending.rawPoints,
       region: pending.candidates[pending.selected].region,
-      fit: { strategy: STRATEGY, options: DEFAULT_FIT_OPTIONS },
+      fit: { strategy: STRATEGY, options: pending.fitOptions },
       reflect,
     };
 
