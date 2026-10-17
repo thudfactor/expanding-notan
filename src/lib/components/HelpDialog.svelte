@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { ISSUES_URL, REPO_URL } from '../links';
-
   let { open = $bindable(false) }: { open?: boolean } = $props();
 
   let dialog: HTMLDialogElement | undefined;
@@ -18,62 +16,34 @@
 </script>
 
 <dialog bind:this={dialog} aria-labelledby="help-title" oncancel={() => (open = false)}>
-  <h2 id="help-title">Help</h2>
-
-  <section>
-    <h3>What is Notan?</h3>
-    <p>
-      Notan is a Japanese design concept about the balance of light and dark. The
-      expanding-square exercise uses simple cuts and flips to grow a composition from a
-      single block of shape.
-    </p>
-  </section>
-
-  <section>
-    <h3>The expanding-square exercise</h3>
-    <p>
-      Start with a black square. Cut a shape out of it, then flip the cut piece over an
-      edge so it lands outside the square. Keep cutting and flipping pieces to expand the
-      design outward.
-    </p>
-    <ul>
-      <li>A cut is freehand. It must either <strong>close on itself</strong> or
-        <strong>start and end on an edge</strong>.</li>
-      <li>Reflect a cut across the <strong>left, right, top, or bottom</strong> edge of the
-        original square.</li>
-      <li>Cut pieces can be cut again. Reflect a new cut across any of the square's four
-        edges.</li>
-      <li>Reflections always use a square edge, so reflecting an outside piece across the
-        <em>same</em> edge brings it back toward the square (a toggle) rather than pushing
-        it further out.</li>
-      <li>Following the rules of Notan is up to you — the tool will not enforce them.</li>
-    </ul>
-  </section>
-
-  <section>
-    <h3>Using this tool</h3>
-    <ul>
-      <li><strong>Draw</strong> a cut by dragging on the square (mouse, pen, or touch).</li>
-      <li><strong>Reflect across</strong> an edge (left, right, top, or bottom) to flip the
-        cut outward, or choose <strong>Hole only</strong>, or <strong>Cancel</strong> (Esc).
-        Hovering a direction highlights the edge and previews where the piece will land.
-        Directions that would place the piece entirely off the artboard are disabled.</li>
-      <li><strong>Undo / Redo</strong> with the buttons, or Cmd/Ctrl+Z and
-        Shift+Cmd/Ctrl+Z.</li>
-      <li><strong>Seams</strong> toggles the construction lines.</li>
-      <li><strong>Export</strong> a PNG or SVG of the full artboard at any time.</li>
-      <li><strong>New project</strong> clears the work (with a confirmation).</li>
-      <li>Your work in progress is saved automatically in this browser.</li>
-    </ul>
-  </section>
-
-  <div class="footer">
-    <nav class="links" aria-label="Project links">
-      <a href={REPO_URL} target="_blank" rel="noopener noreferrer">GitHub repo</a>
-      <a href={ISSUES_URL} target="_blank" rel="noopener noreferrer">Bugs / suggestions</a>
-    </nav>
+  <header>
+    <h2 id="help-title">Getting Started</h2>
     <button type="button" onclick={() => (open = false)}>Close</button>
-  </div>
+  </header>
+
+  <p>
+    This is a classic art exercise. You cut shapes out of a black square, then flip those shapes across one of the edges
+    of the square. Once you have some flipped shapes, you can cut more shapes out of those, flipping them back in
+    towards the square.
+  </p>
+
+  <p>The goal is to create a design that "feels" balanced.</p>
+
+  <p>
+    In the physical world, you would use construction paper, scissors, or a glue-stick. Here, you can draw cuts into the
+    square using your mouse, stylus, or finger (depending on, you know, what device you're on). You must close these
+    shapes either by starting and ending on an edge of a square or cut shape.
+  </p>
+
+  <p>
+    Once you have a design you like, you can use the "export" button in the upper right to save your artwork as an SVG
+    or PNG.
+  </p>
+
+  <p>
+    Your work is saved in your browser as you go, but you can have only one work in progress at a time. Export the
+    images of anything you would like to keep!
+  </p>
 </dialog>
 
 <style>
@@ -97,49 +67,19 @@
     font-size: 1.125rem;
   }
 
-  h3 {
-    margin: 1rem 0 0.375rem;
-    font-size: 0.9375rem;
-  }
-
-  p,
-  li {
-    line-height: 1.5;
-  }
-
   p {
-    margin: 0;
+    margin: 1lh;
   }
 
-  ul {
-    margin: 0.375rem 0 0;
-    padding-left: 1.25rem;
-  }
-
-  .footer {
+  header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
-    margin-top: 1.25rem;
+    margin-block-end: 2lh;
   }
 
-  .links {
-    display: flex;
-    gap: 1rem;
-    font-size: 0.875rem;
-  }
-
-  .links a {
-    color: #2563eb;
-    text-decoration: none;
-  }
-
-  .links a:hover {
-    text-decoration: underline;
-  }
-
-  .footer button {
+  button {
     padding: 0.4375rem 0.875rem;
     border: 1px solid rgba(0, 0, 0, 0.2);
     border-radius: 0.375rem;
@@ -150,7 +90,7 @@
     cursor: pointer;
   }
 
-  .footer button:focus-visible {
+  button:focus-visible {
     outline: 2px solid #2563eb;
     outline-offset: 2px;
   }
