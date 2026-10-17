@@ -10,6 +10,7 @@ the milestone or commit that resolved it.
 | 2 | Done | Drawing | Tolerances for recognizing start/stop points on an edge are too small | 2026-10-14 |
 | 3 | Open | Seams | Seam lines are barely visible for simple cuts | 2026-10-14 |
 | 4 | Done | Onboarding | New users don't know what they are expected to do | 2026-10-14 |
+| 5 | Open | Reflection | Reflecting an interior (edge-less) piece across an axis detaches it; the axis buttons don't say so | 2026-10-17 |
 
 ## 1. Reflection button labels are confusing when reflecting an expanded cut
 
@@ -101,3 +102,25 @@ Notes / things to get right:
 - Only auto-open on first load; never when a saved project exists.
 - The Help dialog already covers the rules and controls (M9), so no new content is needed.
 - Consider pairing with a subtle on-canvas hint ("Drag to cut") for extra clarity.
+
+## 5. Detached reflections aren't signalled on the axis buttons
+
+- **Status:** Open
+- **Area:** Reflection / CommitBar
+- **Raised:** 2026-10-17
+
+A closed interior cut (a shape that touches no square edge) is reflectable, and its
+mirrored copy lands **detached** from the square (ADR 0013; plan `010`). The hover preview
+shows where the copy lands, but the Reflect buttons themselves don't indicate that the
+result will be detached — a user may expect the piece to stay attached.
+
+Options to consider later:
+
+- Label the axis (or its hover) as "detached" when the mirror won't touch the square, e.g. a
+  subtitle or a dashed outline.
+- Add a small "detached" badge to the placement preview.
+
+Note: this is an **affordance**, not a restriction. Interior cuts must remain flippable, so
+these axes are never disabled. The only axes currently disabled are those that would place
+the mirror entirely off the artboard (`disabledEdges`) — a visibility guard, not an
+attachment rule.

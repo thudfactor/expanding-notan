@@ -1,6 +1,6 @@
 # 0014. Boundary-arc cut regions; reject self-intersecting strokes
 
-- Status: Proposed (Accepted once implemented)
+- Status: Accepted
 - Date: 2026-10-17
 - Supersedes: 0009
 
