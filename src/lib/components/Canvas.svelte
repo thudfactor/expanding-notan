@@ -4,8 +4,14 @@
   import { createNotanCanvas, type NotanCanvas } from '../paper/paperSetup';
   import { ARTBOARD_SIZE, squareRect } from '../geometry/artboard';
   import { getFitter } from '../geometry/fit';
-  import { intersectsArtboard, mirrorPoints } from '../geometry/math';
-  import { DEFAULT_CLOSURE_PX, closeRegion, closureOptionsFromScale } from '../geometry/tracing';
+  import { intersectsArtboard, mirrorPoints, polygonArea } from '../geometry/math';
+  import {
+    DEFAULT_CLOSURE_PX,
+    closeRegion,
+    closureOptionsFromScale,
+    strokeCrossesItself,
+    type RegionCandidate,
+  } from '../geometry/tracing';
   import { DEFAULT_FIT_OPTIONS, type CutOp, type Edge, type Pt } from '../geometry/types';
   import { addCut, getOps, getSeamVisible } from '../state/project.svelte';
 
@@ -22,7 +28,9 @@
   // `$state.raw` keeps Paper.js objects uninstrumented by Svelte's proxy.
   let notan = $state.raw<NotanCanvas | undefined>(undefined);
   let hint = $state('');
-  let pending = $state<{ region: Pt[]; snapPoints: Pt[]; rawPoints: Pt[] } | undefined>(undefined);
+  let pending = $state<
+    { candidates: RegionCandidate[]; selected: number; snapPoints: Pt[]; rawPoints: Pt[] } | undefined
+  >(undefined);
 
   const EDGES = ['left', 'right', 'top', 'bottom'] as const;
 
@@ -31,8 +39,9 @@
     const current = pending;
     if (!current) return [];
     const square = squareRect();
+    const region = current.candidates[current.selected].region;
     return EDGES.filter(
-      (edge) => !intersectsArtboard(mirrorPoints(current.region, edge, square), ARTBOARD_SIZE),
+      (edge) => !intersectsArtboard(mirrorPoints(region, edge, square), ARTBOARD_SIZE),
     );
   });
 
@@ -95,12 +104,15 @@
     if (!silhouette) return;
 
     const fitted = getFitter(STRATEGY).fit(capture, DEFAULT_FIT_OPTIONS);
-    const result = closeRegion(
-      notan.scope,
-      fitted,
-      silhouette,
-      closureOptionsFromScale(unitsPerPx()),
-    );
+    const options = closureOptionsFromScale(unitsPerPx());
+
+    if (strokeCrossesItself(fitted, options)) {
+      hint = 'A cut cannot cross itself.';
+      notan.clearPreview();
+      return;
+    }
+
+    const result = closeRegion(notan.scope, fitted, silhouette, options);
 
     if (!result) {
       hint = 'A cut must close on itself or start and end on an edge.';
@@ -108,8 +120,25 @@
       return;
     }
 
-    pending = { region: result.region, snapPoints: result.snapPoints, rawPoints: capture.slice() };
-    notan.showPreviewRegion(result.region, result.snapPoints);
+    const candidates: RegionCandidate[] =
+      result.kind === 'self'
+        ? [{ region: result.region, area: polygonArea(result.region) }]
+        : result.candidates;
+
+    pending = {
+      candidates,
+      selected: 0,
+      snapPoints: result.snapPoints,
+      rawPoints: capture.slice(),
+    };
+    notan.showPreviewRegion(candidates[0].region, result.snapPoints);
+  }
+
+  function selectPiece(index: number): void {
+    if (!pending || !notan) return;
+    if (index < 0 || index >= pending.candidates.length) return;
+    pending = { ...pending, selected: index };
+    notan.showPreviewRegion(pending.candidates[index].region, pending.snapPoints);
   }
 
   function commit(reflect: Edge | null): void {
@@ -118,7 +147,7 @@
     const op: CutOp = {
       id: crypto.randomUUID(),
       rawPoints: pending.rawPoints,
-      region: pending.region,
+      region: pending.candidates[pending.selected].region,
       fit: { strategy: STRATEGY, options: DEFAULT_FIT_OPTIONS },
       reflect,
     };
@@ -135,7 +164,7 @@
       notan.setHover(null, null);
       return;
     }
-    const mirrored = mirrorPoints(pending.region, edge, squareRect());
+    const mirrored = mirrorPoints(pending.candidates[pending.selected].region, edge, squareRect());
     notan.setHover(edge, mirrored);
   }
 
@@ -203,6 +232,9 @@
       oncancel={cancel}
       onhover={onHover}
       disabledEdges={disabledEdges}
+      pieceCount={pending.candidates.length}
+      selectedPiece={pending.selected}
+      onselectpiece={selectPiece}
     />
   {:else if hint}
     <p class="hint" role="status">{hint}</p>

@@ -34,3 +34,4 @@ when the corresponding decision is first implemented.
 | 0011 | Raw points canonical; pluggable stroke fitting | Store raw input; simplify/smooth is a replaceable `StrokeFitter` strategy |
 | 0012 | Playwright for screenshots and visual verification | Headless captures via `npm run shot`; committed under `docs/screenshots/` |
 | 0013 | Pieces independent; attachment emergent; placement derived | No stored attachment; mirror is the default placement, with future authored overrides |
+| 0014 | Boundary-arc cut regions; reject self-intersecting strokes | Supersedes 0009; region = stroke + boundary arc; reject self-intersection; explicit piece selection |

@@ -1,6 +1,6 @@
 # 0009. Cut validity and snap-to-any-artwork-edge
 
-- Status: Accepted
+- Status: Superseded by ADR 0014 (boundary-arc cut regions)
 - Date: 2026-10-14
 
 ## Context

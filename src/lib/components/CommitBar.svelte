@@ -7,12 +7,19 @@
     oncancel,
     onhover,
     disabledEdges = [],
+    pieceCount = 1,
+    selectedPiece = 0,
+    onselectpiece,
   }: {
     onreflect: (edge: Edge) => void;
     onholeonly: () => void;
     oncancel: () => void;
     onhover: (edge: Edge | null) => void;
     disabledEdges?: readonly Edge[];
+    /** Number of candidate cut pieces; >1 means the user must choose. */
+    pieceCount?: number;
+    selectedPiece?: number;
+    onselectpiece?: (index: number) => void;
   } = $props();
 
   const isDisabled = (edge: Edge): boolean => disabledEdges.includes(edge);
@@ -26,6 +33,27 @@
 </script>
 
 <div class="commitbar" role="toolbar" aria-label="Commit cut">
+  {#if pieceCount > 1}
+    <span class="commitbar__label">Cut piece</span>
+    <button
+      type="button"
+      class="btn"
+      aria-pressed={selectedPiece === 0}
+      aria-label="Use the smaller cut piece"
+      onclick={() => onselectpiece?.(0)}
+    >
+      Smaller
+    </button>
+    <button
+      type="button"
+      class="btn"
+      aria-pressed={selectedPiece === 1}
+      aria-label="Use the larger cut piece"
+      onclick={() => onselectpiece?.(1)}
+    >
+      Larger
+    </button>
+  {/if}
   <span class="commitbar__label">Reflect across</span>
   {#each directions as direction (direction.edge)}
     <button

@@ -1,4 +1,5 @@
 import { pathFromPoints, type PaperPathItem, type PaperScope } from './engine';
+import { polygonArea } from './math';
 import type { Pt } from './types';
 
 export interface ClosureOptions {
@@ -8,7 +9,7 @@ export interface ClosureOptions {
   snapThreshold: number;
   /** Minimum resolved region area; smaller cuts are rejected. */
   minArea: number;
-  /** Max distance a boundary-chord sample may sit from the silhouette. */
+  /** Max distance a boundary endpoint may sit from the silhouette. */
   boundaryTolerance: number;
 }
 
@@ -18,6 +19,16 @@ export const DEFAULT_CLOSURE: ClosureOptions = {
   minArea: 24,
   boundaryTolerance: 1.5,
 };
+
+/** Spacing (artboard units) between samples along a boundary arc. */
+const ARC_STEP = 2;
+
+/**
+ * When a cut divides the silhouette into two pieces whose areas are this
+ * similar (smaller / larger), the choice of which piece is "the cut" is
+ * ambiguous and both are offered. Otherwise only the smaller piece is returned.
+ */
+const PIECE_AMBIGUITY_RATIO = 0.5;
 
 /** Grab radii in CSS pixels, converted to artboard units via the view scale. */
 export interface ClosureRadiiPx {
@@ -48,13 +59,31 @@ export function closureOptionsFromScale(
 
 export type ClosureKind = 'self' | 'edge';
 
-export interface ClosureResult {
-  kind: ClosureKind;
+/** A resolved, black-clipped region plus its area (for default selection). */
+export interface RegionCandidate {
+  region: Pt[];
+  area: number;
+}
+
+export interface SelfClosure {
+  kind: 'self';
   /** Resolved, black-clipped cut region in artboard units. */
   region: Pt[];
-  /** Where the stroke was snapped to the silhouette (empty for 'self'). */
-  snapPoints: Pt[];
+  snapPoints: [];
 }
+
+export interface EdgeClosure {
+  kind: 'edge';
+  /** Where the stroke met the silhouette, in order. */
+  snapPoints: [Pt, Pt];
+  /**
+   * The sub-region(s) the stroke partitions the silhouette into, smallest
+   * first. Usually one (the smaller piece); two when the split is near-even.
+   */
+  candidates: RegionCandidate[];
+}
+
+export type ClosureResult = SelfClosure | EdgeClosure;
 
 function distance(a: Pt, b: Pt): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
@@ -70,7 +99,12 @@ function dedupe(points: readonly Pt[]): Pt[] {
 }
 
 function areaOf(item: PaperPathItem): number {
-  return (item as unknown as { area: number }).area;
+  return Math.abs((item as unknown as { area: number }).area);
+}
+
+function childrenOf(item: PaperPathItem): PaperPathItem[] {
+  const children = (item as unknown as { children?: PaperPathItem[] }).children;
+  return children && children.length > 0 ? children : [item];
 }
 
 function pathToPoints(item: PaperPathItem): Pt[] {
@@ -100,22 +134,58 @@ function nearestOnPath(
   };
 }
 
-/** Does the straight chord from a to b stay on the silhouette boundary? */
-function chordFollowsBoundary(
-  scope: PaperScope,
-  silhouette: PaperPathItem,
-  a: Pt,
-  b: Pt,
-  tolerance: number,
-): boolean {
-  const samples = 16;
-  for (let i = 0; i <= samples; i++) {
-    const t = i / samples;
-    const point = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
-    if (nearestOnPath(scope, silhouette, point).distance > tolerance) return false;
+// --- Simplicity (a stroke may not cross itself) ---------------------------
+
+/** Strict proper-crossing test between segments ab and cd. */
+function segmentsCross(a: Pt, b: Pt, c: Pt, d: Pt): boolean {
+  const orient = (p: Pt, q: Pt, r: Pt): number =>
+    (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x);
+  const d1 = orient(a, b, c);
+  const d2 = orient(a, b, d);
+  const d3 = orient(c, d, a);
+  const d4 = orient(c, d, b);
+  return (d1 > 0) !== (d2 > 0) && (d3 > 0) !== (d4 > 0);
+}
+
+/**
+ * A polyline is simple when no two non-adjacent segments cross. `closed` treats
+ * the first and last segments as adjacent (wrapping).
+ */
+function isSimple(points: readonly Pt[], closed: boolean): boolean {
+  const n = points.length;
+  if (n < 3) return false;
+  const segments = closed ? n : n - 1;
+  for (let i = 0; i < segments; i++) {
+    const a = points[i];
+    const b = points[(i + 1) % n];
+    for (let j = i + 1; j < segments; j++) {
+      if (j === i + 1) continue; // shares an endpoint
+      if (closed && i === 0 && j === segments - 1) continue; // wrap adjacency
+      const c = points[j];
+      const d = points[(j + 1) % n];
+      if (segmentsCross(a, b, c, d)) return false;
+    }
   }
   return true;
 }
+
+/**
+ * True when a freehand stroke crosses itself. Scissors cannot cross their own
+ * just-cut line, so such strokes are not valid cuts (ADR 0014). Crossing an
+ * *earlier* cut is fine and is not detected here. A near-closed stroke is
+ * treated as a loop, so its first and last segments count as adjacent.
+ */
+export function strokeCrossesItself(
+  points: readonly Pt[],
+  options: ClosureOptions = DEFAULT_CLOSURE,
+): boolean {
+  const deduped = dedupe(points);
+  if (deduped.length < 3) return false;
+  const closed = distance(deduped[0], deduped[deduped.length - 1]) <= options.closeThreshold;
+  return closed ? !isSimple(deduped.slice(0, -1), true) : !isSimple(deduped, false);
+}
+
+// --- Region resolution ----------------------------------------------------
 
 /** Clip a closed polygon to the black silhouette; null if too small. */
 function clipToSilhouette(
@@ -129,6 +199,29 @@ function clipToSilhouette(
   if (!clipped || areaOf(clipped) < options.minArea) return null;
   const region = pathToPoints(clipped);
   return region.length >= 3 ? region : null;
+}
+
+/**
+ * Resolve a candidate region. A candidate is rejected when it carries a hole
+ * (an enclosed existing hole cannot be represented by the single-polygon
+ * `region`), or when it is smaller than `minArea`.
+ */
+function resolveCandidate(
+  scope: PaperScope,
+  polygon: readonly Pt[],
+  silhouette: PaperPathItem,
+  options: ClosureOptions,
+): RegionCandidate | null {
+  if (polygon.length < 3) return null;
+  const clipped = pathFromPoints(scope, polygon).intersect(silhouette);
+  if (!clipped) return null;
+
+  const areas = childrenOf(clipped).map(areaOf).sort((a, b) => b - a);
+  if (areas.length > 1 && areas[1] >= options.minArea) return null; // has a hole
+  if (areas[0] < options.minArea) return null;
+
+  const region = pathToPoints(clipped);
+  return region.length >= 3 ? { region, area: polygonArea(region) } : null;
 }
 
 function cumulativeOffsets(points: readonly Pt[]): number[] {
@@ -213,14 +306,77 @@ function resolveEndpoints(
   return { start: start.point, end: end.point, middle: points.slice(1, -1) };
 }
 
+// --- Boundary arcs --------------------------------------------------------
+
+/** The individual closed boundary contours of the silhouette. */
+function boundaryPaths(silhouette: PaperPathItem): PaperPathItem[] {
+  return childrenOf(silhouette);
+}
+
+function offsetOnPath(scope: PaperScope, path: PaperPathItem, point: Pt): number {
+  const target = path as unknown as { getOffsetOf(p: unknown): number };
+  return target.getOffsetOf(new scope.Point(point.x, point.y));
+}
+
+/** Sample a path between two offsets, walking forward (wrapping if needed). */
+function sampleArc(path: PaperPathItem, fromOffset: number, toOffset: number): Pt[] {
+  const target = path as unknown as {
+    length: number;
+    getPointAt(offset: number): { x: number; y: number };
+  };
+  const total = target.length;
+  if (!(total > 0)) return [];
+
+  let span = toOffset - fromOffset;
+  if (span < 0) span += total;
+  const count = Math.max(1, Math.ceil(span / ARC_STEP));
+
+  const points: Pt[] = [];
+  for (let i = 0; i <= count; i++) {
+    const offset = (fromOffset + (span * i) / count) % total;
+    const point = target.getPointAt(offset);
+    points.push({ x: point.x, y: point.y });
+  }
+  return points;
+}
+
+/**
+ * The two boundary runs from `end` back to `start`, along the same contour:
+ * one going each way around the loop. Returns null when the endpoints are not
+ * on the same contour (outer vs a hole) — that cut is a slit, not a piece.
+ */
+function boundaryArcs(
+  scope: PaperScope,
+  silhouette: PaperPathItem,
+  start: Pt,
+  end: Pt,
+  options: ClosureOptions,
+): [Pt[], Pt[]] | null {
+  for (const path of boundaryPaths(silhouette)) {
+    const a = nearestOnPath(scope, path, start);
+    const b = nearestOnPath(scope, path, end);
+    if (a.distance > options.boundaryTolerance || b.distance > options.boundaryTolerance) continue;
+
+    const from = offsetOnPath(scope, path, a.point);
+    const to = offsetOnPath(scope, path, b.point);
+    const forward = sampleArc(path, to, from); // end -> start
+    const backward = sampleArc(path, from, to).reverse(); // end -> start, other way
+    return [forward, backward];
+  }
+  return null;
+}
+
 /**
  * Turn a fitted stroke into a cut region, or null when the stroke is neither
  * closed on itself nor a valid edge-to-edge cut.
  *
+ * - A stroke that crosses itself is rejected (ADR 0014).
  * - Near-closed strokes become a region directly.
  * - Otherwise the endpoints come from where the stroke crosses the silhouette
- *   (falling back to snapping nearby endpoints), the closing chord must follow
- *   the boundary, and the region is clipped to the current black silhouette.
+ *   (falling back to snapping nearby endpoints), and the region is the area
+ *   enclosed by the stroke plus the boundary arc between the endpoints.
+ * - A boundary-to-boundary cut may partition the silhouette into two pieces;
+ *   both are returned when their areas are comparable (smallest first).
  */
 export function closeRegion(
   scope: PaperScope,
@@ -232,16 +388,34 @@ export function closeRegion(
   if (points.length < 3) return null;
 
   if (distance(points[0], points[points.length - 1]) <= options.closeThreshold) {
-    const region = clipToSilhouette(scope, points.slice(0, -1), silhouette, options);
+    const loop = points.slice(0, -1);
+    if (!isSimple(loop, true)) return null;
+    const region = clipToSilhouette(scope, loop, silhouette, options);
     return region ? { kind: 'self', region, snapPoints: [] } : null;
   }
+
+  if (!isSimple(points, false)) return null;
 
   const endpoints = resolveEndpoints(scope, points, silhouette, options);
   if (!endpoints) return null;
 
   const { start, end, middle } = endpoints;
-  if (!chordFollowsBoundary(scope, silhouette, start, end, options.boundaryTolerance)) return null;
+  const arcs = boundaryArcs(scope, silhouette, start, end, options);
+  if (!arcs) return null;
 
-  const region = clipToSilhouette(scope, [start, ...middle, end], silhouette, options);
-  return region ? { kind: 'edge', region, snapPoints: [start, end] } : null;
+  const candidates: RegionCandidate[] = [];
+  for (const arc of arcs) {
+    const polygon = dedupe([start, ...middle, end, ...arc.slice(1, -1)]);
+    if (!isSimple(polygon, true)) continue;
+    const candidate = resolveCandidate(scope, polygon, silhouette, options);
+    if (candidate) candidates.push(candidate);
+  }
+  if (candidates.length === 0) return null;
+
+  candidates.sort((a, b) => a.area - b.area);
+  const [small, large] = candidates;
+  const resolved =
+    large && small.area / large.area >= PIECE_AMBIGUITY_RATIO ? [small, large] : [small];
+
+  return { kind: 'edge', snapPoints: [start, end], candidates: resolved };
 }
