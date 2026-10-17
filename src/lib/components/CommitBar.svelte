@@ -30,6 +30,7 @@
   {#each directions as direction (direction.edge)}
     <button
       type="button"
+      class="btn btn--primary"
       disabled={isDisabled(direction.edge)}
       aria-label={`Reflect across the ${direction.label.toLowerCase()} edge`}
       onclick={() => onreflect(direction.edge)}
@@ -43,7 +44,7 @@
   {/each}
   <button
     type="button"
-    class="commitbar__secondary"
+    class="btn btn--ghost"
     onmouseenter={() => onhover(null)}
     onfocus={() => onhover(null)}
     onclick={onholeonly}
@@ -52,7 +53,7 @@
   </button>
   <button
     type="button"
-    class="commitbar__secondary"
+    class="btn btn--ghost"
     onmouseenter={() => onhover(null)}
     onfocus={() => onhover(null)}
     onclick={oncancel}
@@ -82,36 +83,5 @@
     font-size: 0.8125rem;
     font-weight: 600;
     color: rgba(0, 0, 0, 0.6);
-  }
-
-  button {
-    padding: 0.375rem 0.625rem;
-    border: 1px solid transparent;
-    border-radius: 0.375rem;
-    background: var(--accent, #2563eb);
-    color: #fff;
-    font: inherit;
-    font-size: 0.8125rem;
-    cursor: pointer;
-  }
-
-  button:hover:not(:disabled) {
-    filter: brightness(1.08);
-  }
-
-  button:disabled {
-    opacity: 0.4;
-    cursor: default;
-  }
-
-  button:focus-visible {
-    outline: 2px solid #111;
-    outline-offset: 2px;
-  }
-
-  .commitbar__secondary {
-    background: transparent;
-    color: #1a1a1a;
-    border-color: rgba(0, 0, 0, 0.2);
   }
 </style>

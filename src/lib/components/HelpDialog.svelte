@@ -18,7 +18,7 @@
 <dialog bind:this={dialog} aria-labelledby="help-title" oncancel={() => (open = false)}>
   <header>
     <h2 id="help-title">Getting Started</h2>
-    <button type="button" onclick={() => (open = false)}>Close</button>
+    <button type="button" class="btn btn--lg" onclick={() => (open = false)}>Close</button>
   </header>
 
   <p>
@@ -51,19 +51,10 @@
     max-width: 32rem;
     max-height: 85vh;
     padding: 1.25rem 1.5rem;
-    border: none;
-    border-radius: 0.5rem;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
-    font: inherit;
     overflow-y: auto;
   }
 
-  dialog::backdrop {
-    background: rgba(0, 0, 0, 0.35);
-  }
-
   h2 {
-    margin: 0 0 0.75rem;
     font-size: 1.125rem;
   }
 
@@ -77,21 +68,5 @@
     justify-content: space-between;
     gap: 1rem;
     margin-block-end: 2lh;
-  }
-
-  button {
-    padding: 0.4375rem 0.875rem;
-    border: 1px solid rgba(0, 0, 0, 0.2);
-    border-radius: 0.375rem;
-    background: #fff;
-    color: #1a1a1a;
-    font: inherit;
-    font-size: 0.875rem;
-    cursor: pointer;
-  }
-
-  button:focus-visible {
-    outline: 2px solid #2563eb;
-    outline-offset: 2px;
   }
 </style>

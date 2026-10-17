@@ -20,12 +20,12 @@
 </script>
 
 <div class="toolbar" role="toolbar" aria-label="Edit actions">
-  <button type="button" disabled={!canUndo()} onclick={undo}>Undo</button>
-  <button type="button" disabled={!canRedo()} onclick={redo}>Redo</button>
-  <button type="button" aria-pressed={getSeamVisible()} onclick={toggleSeams}>Seams</button>
-  <button type="button" onclick={() => (exportOpen = true)}>Export</button>
-  <button type="button" onclick={() => (confirmNew = true)}>New project</button>
-  <button type="button" onclick={() => (helpOpen = true)}>Help</button>
+  <button type="button" class="btn" disabled={!canUndo()} onclick={undo}>Undo</button>
+  <button type="button" class="btn" disabled={!canRedo()} onclick={redo}>Redo</button>
+  <button type="button" class="btn" aria-pressed={getSeamVisible()} onclick={toggleSeams}>Seams</button>
+  <button type="button" class="btn" onclick={() => (exportOpen = true)}>Export</button>
+  <button type="button" class="btn" onclick={() => (confirmNew = true)}>New project</button>
+  <button type="button" class="btn" onclick={() => (helpOpen = true)}>Help</button>
 </div>
 
 <ConfirmDialog
@@ -45,40 +45,5 @@
     display: flex;
     gap: 0.375rem;
     margin-left: auto;
-  }
-
-  button {
-    padding: 0.375rem 0.75rem;
-    border: 1px solid rgba(0, 0, 0, 0.2);
-    border-radius: 0.375rem;
-    background: #fff;
-    color: #1a1a1a;
-    font: inherit;
-    font-size: 0.8125rem;
-    cursor: pointer;
-  }
-
-  button:hover:not(:disabled) {
-    background: rgba(0, 0, 0, 0.04);
-  }
-
-  button:disabled {
-    opacity: 0.45;
-    cursor: default;
-  }
-
-  button[aria-pressed='true'] {
-    border-color: #2563eb;
-    background: #2563eb;
-    color: #fff;
-  }
-
-  button[aria-pressed='true']:hover {
-    background: #2563eb;
-  }
-
-  button:focus-visible {
-    outline: 2px solid #2563eb;
-    outline-offset: 2px;
   }
 </style>
