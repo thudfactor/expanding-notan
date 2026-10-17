@@ -27,8 +27,7 @@ a stroke may not intersect itself.
 ## Decision
 
 - An edge-to-edge cut's region is the area enclosed by the stroke **plus the boundary arc
-  between the two endpoints** (`Path#splitAt`), not a straight chord. This restores the plan's
-  model.
+  between the two endpoints**, not a straight chord. This restores the plan's model.
 - **Drop `chordFollowsBoundary`.** Any two resolved boundary endpoints define a closing arc.
 - **Reject a stroke that intersects itself** (non-adjacent segments crossing). Scissors cannot
   cross their own just-cut line. Crossing a *previous* cut stays allowed — scissors can lift
@@ -39,7 +38,7 @@ a stroke may not intersect itself.
   now potentially valid. Resolve the ambiguity with an **explicit piece selection**, defaulting
   to the smaller-area piece.
 - Endpoints on **different boundary components** (outer vs a hole) leave "the other arc"
-  ill-defined; such cuts are slits and are rejected by `minArea` (fallback in risk 090).
+  ill-defined; such cuts are slits and are rejected (no single contour holds both endpoints).
 
 The stored op schema is unchanged: an op stores the *chosen* resolved `region` (ADRs 0003 /
 0011).
@@ -50,11 +49,11 @@ The stored op schema is unchanged: an op stores the *chosen* resolved `region` (
 - Corner cuts (adjacent edges) and near-flat irregular boundaries now match physical paper.
 - Mirrored copies stay attached, because the closing edge is genuinely the boundary.
 - New UI: a way to choose *which* piece is the cut piece (CommitBar gains a piece toggle, or
-  click-to-pick on the canvas). Reflection axes the piece does not touch may be disabled or
-  warned.
+  click-to-pick on the canvas). Axes the piece does not touch are **not** disabled — interior
+  cuts must stay flippable (ADR 0013); the UI may instead signal a detached result (UX #5).
 - A new validity rule (self-intersection) needs its own hint copy, distinct from
   "must close on itself or start and end on an edge."
-- More Paper-dependent code (`splitAt` on compound paths, simplicity validation) and higher
+- More boundary-walking code (arc sampling per contour, simplicity validation) and higher
   fragility; risk 090's mitigation and outer-boundary fallback apply.
 
 ## Alternatives considered
@@ -70,7 +69,14 @@ The stored op schema is unchanged: an op stores the *chosen* resolved `region` (
 
 ## Implementation
 
-`closeRegion` in `src/lib/geometry/tracing.ts`: arc closing via `Path#splitAt`, a
-self-intersection guard, and a two-candidate result the UI selects between. Endpoints continue
-to be resolved by `resolveEndpoints` (crossings, then snap). See ADRs 0009 / 0011 for the
-retained parts of the closure pipeline.
+`closeRegion` in `src/lib/geometry/tracing.ts`: arc closing, a self-intersection guard, and a
+two-candidate result the UI selects between. Endpoints continue to be resolved by
+`resolveEndpoints` (crossings, then snap). See ADRs 0009 / 0011 for the retained parts of the
+closure pipeline.
+
+**Arc extraction: sampling, not `splitAt`.** The boundary arc is sampled per contour
+(`sampleArc`, `ARC_STEP = 2` artboard units) rather than cut with `Path#splitAt`. Sampling is
+simpler and robust on compound silhouettes, and its error is self-correcting: the candidate
+polygon is re-intersected with the true silhouette, so the sampled arc's chord-chain is snapped
+back to the boundary and the shave is sub-unit. `splitAt` (real curves) remains the alternative
+if boundary fidelity ever needs to be exact.
