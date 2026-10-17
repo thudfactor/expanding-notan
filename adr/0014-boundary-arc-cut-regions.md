@@ -32,6 +32,12 @@ a stroke may not intersect itself.
 - **Reject a stroke that intersects itself** (non-adjacent segments crossing). Scissors cannot
   cross their own just-cut line. Crossing a *previous* cut stays allowed — scissors can lift
   and re-enter.
+- **Evaluate that rule on the fitted stroke, but never let fitting introduce a crossing.** The
+  fitter (RDP + smoothing) can change topology; if the requested fit self-intersects while the
+  raw stroke does not, fall back to a less aggressive fit (dropping smoothing, then
+  simplification, then decimation, then the raw stroke itself) until the fit is simple. Jitter
+  that fitting cleans up is accepted; genuine crossings survive. The effective options are
+  stored on the op (ADR 0011).
 - **Reject a non-simple candidate region** — a stroke that crosses its closing arc away from
   the endpoints (per `090-risks-and-assumptions.md`).
 - A boundary-to-boundary stroke partitions the silhouette into two sub-regions, and both are
@@ -80,3 +86,8 @@ simpler and robust on compound silhouettes, and its error is self-correcting: th
 polygon is re-intersected with the true silhouette, so the sampled arc's chord-chain is snapped
 back to the boundary and the shave is sub-unit. `splitAt` (real curves) remains the alternative
 if boundary fidelity ever needs to be exact.
+
+**Topology-preserving fit.** `fitPreservingTopology` in `src/lib/geometry/fit/topology.ts`
+wraps the fitter: it takes a `crosses` predicate (injected, so the module stays Paper-free) and
+walks an aggressiveness ladder down to the raw stroke until the fit is simple. `Canvas` uses it
+and stores the effective `fit.options` on the committed op.
