@@ -11,6 +11,7 @@ the milestone or commit that resolved it.
 | 3 | Open | Seams | Seam lines are barely visible for simple cuts | 2026-10-14 |
 | 4 | Done | Onboarding | New users don't know what they are expected to do | 2026-10-14 |
 | 5 | Open | Reflection | Reflecting an interior (edge-less) piece across an axis detaches it; the axis buttons don't say so | 2026-10-17 |
+| 6 | Done | Commit bar | The smaller/larger piece chooser looked like a pair of action buttons | 2026-10-18 |
 
 ## 1. Reflection button labels are confusing when reflecting an expanded cut
 
@@ -124,3 +125,23 @@ Note: this is an **affordance**, not a restriction. Interior cuts must remain fl
 these axes are never disabled. The only axes currently disabled are those that would place
 the mirror entirely off the artboard (`disabledEdges`) — a visibility guard, not an
 attachment rule.
+
+## 6. The smaller/larger piece chooser looked like action buttons
+
+- **Status:** Done — replaced the two `aria-pressed` buttons with a segmented radio group
+- **Area:** Commit bar
+- **Raised:** 2026-10-18
+
+When a cut divides the silhouette into two comparable pieces, the commit bar initially offered
+two buttons ("Smaller" / "Larger") to pick which piece is kept. They were styled like the
+Reflect action buttons, so choosing a piece read as a risky, commit-like action rather than a
+selection, and the live preview switched with no obvious cue.
+
+**Done:** the choice is now a segmented **radio group** (`role="radiogroup"`, native
+`<input type="radio">`s wrapped in labels) under the "Cut piece" label, so the selected piece
+reads as a state and the preview updates on selection.
+
+Possible follow-ups if it still isn't clear:
+
+- Show what "smaller"/"larger" will do more concretely (e.g. a thumbnail or an area readout).
+- Default to the smaller piece but surface the choice only when it actually matters.
