@@ -107,6 +107,18 @@ function childrenOf(item: PaperPathItem): PaperPathItem[] {
   return children && children.length > 0 ? children : [item];
 }
 
+/**
+ * Relative tolerance for the "covers the whole silhouette" guard. A region that
+ * consumes the entire silhouette would erase the artwork rather than cut a piece
+ * from it; it arises when a stroke drawn outside the shape is closed the long way
+ * around the boundary (e.g. an edge-attached stroke bulging outward).
+ */
+const WHOLE_SILHOUETTE_EPSILON = 1e-6;
+
+function coversWholeSilhouette(area: number, silhouetteArea: number): boolean {
+  return area > silhouetteArea * (1 - WHOLE_SILHOUETTE_EPSILON);
+}
+
 function pathToPoints(item: PaperPathItem): Pt[] {
   const children = (item as unknown as { children?: PaperPathItem[] }).children;
   if (children && children.length > 0) {
@@ -187,16 +199,22 @@ export function strokeCrossesItself(
 
 // --- Region resolution ----------------------------------------------------
 
-/** Clip a closed polygon to the black silhouette; null if too small. */
+/**
+ * Clip a closed polygon to the black silhouette; null if too small or if it
+ * covers the whole silhouette (no piece would remain).
+ */
 function clipToSilhouette(
   scope: PaperScope,
   polygon: readonly Pt[],
   silhouette: PaperPathItem,
+  silhouetteArea: number,
   options: ClosureOptions,
 ): Pt[] | null {
   if (polygon.length < 3) return null;
   const clipped = pathFromPoints(scope, polygon).intersect(silhouette);
-  if (!clipped || areaOf(clipped) < options.minArea) return null;
+  if (!clipped) return null;
+  const area = areaOf(clipped);
+  if (area < options.minArea || coversWholeSilhouette(area, silhouetteArea)) return null;
   const region = pathToPoints(clipped);
   return region.length >= 3 ? region : null;
 }
@@ -204,12 +222,14 @@ function clipToSilhouette(
 /**
  * Resolve a candidate region. A candidate is rejected when it carries a hole
  * (an enclosed existing hole cannot be represented by the single-polygon
- * `region`), or when it is smaller than `minArea`.
+ * `region`), when it is smaller than `minArea`, or when it covers the whole
+ * silhouette (a stroke drawn outside the shape must not erase it).
  */
 function resolveCandidate(
   scope: PaperScope,
   polygon: readonly Pt[],
   silhouette: PaperPathItem,
+  silhouetteArea: number,
   options: ClosureOptions,
 ): RegionCandidate | null {
   if (polygon.length < 3) return null;
@@ -219,6 +239,7 @@ function resolveCandidate(
   const areas = childrenOf(clipped).map(areaOf).sort((a, b) => b - a);
   if (areas.length > 1 && areas[1] >= options.minArea) return null; // has a hole
   if (areas[0] < options.minArea) return null;
+  if (coversWholeSilhouette(areas[0], silhouetteArea)) return null;
 
   const region = pathToPoints(clipped);
   return region.length >= 3 ? { region, area: polygonArea(region) } : null;
@@ -377,6 +398,9 @@ function boundaryArcs(
  *   enclosed by the stroke plus the boundary arc between the endpoints.
  * - A boundary-to-boundary cut may partition the silhouette into two pieces;
  *   both are returned when their areas are comparable (smallest first).
+ * - A region that covers the whole silhouette is rejected: a stroke lying
+ *   outside the shape (e.g. an edge-attached bulge closed the long way around)
+ *   must not erase the artwork.
  */
 export function closeRegion(
   scope: PaperScope,
@@ -387,10 +411,12 @@ export function closeRegion(
   const points = dedupe(fitted);
   if (points.length < 3) return null;
 
+  const silhouetteArea = areaOf(silhouette);
+
   if (distance(points[0], points[points.length - 1]) <= options.closeThreshold) {
     const loop = points.slice(0, -1);
     if (!isSimple(loop, true)) return null;
-    const region = clipToSilhouette(scope, loop, silhouette, options);
+    const region = clipToSilhouette(scope, loop, silhouette, silhouetteArea, options);
     return region ? { kind: 'self', region, snapPoints: [] } : null;
   }
 
@@ -407,7 +433,7 @@ export function closeRegion(
   for (const arc of arcs) {
     const polygon = dedupe([start, ...middle, end, ...arc.slice(1, -1)]);
     if (!isSimple(polygon, true)) continue;
-    const candidate = resolveCandidate(scope, polygon, silhouette, options);
+    const candidate = resolveCandidate(scope, polygon, silhouette, silhouetteArea, options);
     if (candidate) candidates.push(candidate);
   }
   if (candidates.length === 0) return null;

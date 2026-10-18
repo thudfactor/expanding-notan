@@ -40,6 +40,10 @@ a stroke may not intersect itself.
   stored on the op (ADR 0011).
 - **Reject a non-simple candidate region** — a stroke that crosses its closing arc away from
   the endpoints (per `090-risks-and-assumptions.md`).
+- **Reject a region that covers the whole silhouette.** A stroke drawn outside the shape can
+  otherwise be closed the long way around the boundary and enclose the entire silhouette;
+  that region is not a piece. Subtracting it would erase the artwork, and reflecting it would
+  flip the whole square across the edge.
 - A boundary-to-boundary stroke partitions the silhouette into two sub-regions, and both are
   now potentially valid. Resolve the ambiguity with an **explicit piece selection**, defaulting
   to the smaller-area piece.

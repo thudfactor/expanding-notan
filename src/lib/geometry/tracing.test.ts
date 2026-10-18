@@ -99,6 +99,32 @@ describe('closeRegion', () => {
     expect(result.candidates[0].area).toBeGreaterThan(0);
   });
 
+  it('rejects a stroke drawn entirely outside an edge it is attached to', () => {
+    const { scope, silhouette } = spot();
+    // Both endpoints sit on the left edge (x = 240) but the stroke bulges out
+    // into the margin. Closing it the long way around would enclose the whole
+    // square, which would erase the artwork instead of cutting a piece.
+    const stroke: Pt[] = [
+      { x: 240, y: 400 },
+      { x: 200, y: 400 },
+      { x: 240, y: 440 },
+    ];
+    expect(closeRegion(scope, stroke, silhouette)).toBeNull();
+  });
+
+  it('rejects a closed stroke that only surrounds the silhouette', () => {
+    const { scope, silhouette } = spot();
+    // A loop in the margin enclosing the square; nothing is actually cut.
+    const loop: Pt[] = [
+      { x: 200, y: 200 },
+      { x: 680, y: 200 },
+      { x: 680, y: 680 },
+      { x: 200, y: 680 },
+      { x: 200, y: 200 },
+    ];
+    expect(closeRegion(scope, loop, silhouette)).toBeNull();
+  });
+
   it('rejects a region smaller than the minimum area', () => {
     const { scope, silhouette } = spot();
     const tiny: Pt[] = [
